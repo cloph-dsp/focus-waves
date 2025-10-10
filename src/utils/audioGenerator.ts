@@ -1,5 +1,6 @@
 // Audio context singleton
 let audioContext: AudioContext | null = null;
+let activeLoop: { stop: boolean } = { stop: false };
 
 const getAudioContext = () => {
   if (!audioContext) {
@@ -7,6 +8,8 @@ const getAudioContext = () => {
   }
   return audioContext;
 };
+
+export type VisualCallback = (array: number[], highlightIndices?: number[]) => void;
 
 // Generate a tone at a specific frequency
 const playTone = (frequency: number, duration: number, startTime: number) => {
@@ -61,193 +64,310 @@ export const sortingAlgorithms: SortingAlgorithm[] = [
   { id: 'tim', name: 'Tim Sort', description: 'Hybrid merge-insertion with complexity', category: 'Hybrid', complexity: 'O(n log n)', color: 'from-purple-500 to-indigo-500' },
 ];
 
-// Sorting algorithm implementations with audio feedback
-export const generateBubbleSort = async (size: number = 30) => {
-  const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
-  const ctx = getAudioContext();
-  let time = ctx.currentTime;
-  const noteDuration = 0.05;
+// Helper to create delay for visual updates
+const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-  for (let i = 0; i < array.length; i++) {
-    for (let j = 0; j < array.length - i - 1; j++) {
-      if (array[j] > array[j + 1]) {
-        [array[j], array[j + 1]] = [array[j + 1], array[j]];
-        playTone(valueToFrequency(array[j], size), noteDuration, time);
-        playTone(valueToFrequency(array[j + 1], size), noteDuration, time + noteDuration / 2);
-        time += noteDuration;
+// Stop all active loops
+export const stopAllSorting = () => {
+  activeLoop.stop = true;
+};
+
+export const resetLoop = () => {
+  activeLoop = { stop: false };
+};
+
+// Sorting algorithm implementations with audio feedback and visual updates
+export const generateBubbleSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    let time = ctx.currentTime;
+    const noteDuration = 0.05;
+
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      for (let j = 0; j < array.length - i - 1 && !activeLoop.stop; j++) {
+        if (array[j] > array[j + 1]) {
+          [array[j], array[j + 1]] = [array[j + 1], array[j]];
+          playTone(valueToFrequency(array[j], size), noteDuration, time);
+          playTone(valueToFrequency(array[j + 1], size), noteDuration, time + noteDuration / 2);
+          time += noteDuration;
+          
+          if (visualCallback) {
+            visualCallback([...array], [j, j + 1]);
+            await delay(50);
+          }
+        }
       }
     }
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500); // Pause before next iteration
   }
 };
 
-export const generateQuickSort = async (size: number = 30) => {
-  const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
-  const ctx = getAudioContext();
-  let time = ctx.currentTime;
-  const noteDuration = 0.03;
+export const generateQuickSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    let time = ctx.currentTime;
+    const noteDuration = 0.03;
 
-  const quickSort = (arr: number[], low: number, high: number) => {
-    if (low < high) {
-      const pi = partition(arr, low, high);
-      quickSort(arr, low, pi - 1);
-      quickSort(arr, pi + 1, high);
-    }
-  };
-
-  const partition = (arr: number[], low: number, high: number): number => {
-    const pivot = arr[high];
-    let i = low - 1;
-
-    for (let j = low; j < high; j++) {
-      if (arr[j] < pivot) {
-        i++;
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-        playTone(valueToFrequency(arr[i], size), noteDuration, time);
-        time += noteDuration;
+    const quickSort = async (arr: number[], low: number, high: number) => {
+      if (low < high && !activeLoop.stop) {
+        const pi = await partition(arr, low, high);
+        await quickSort(arr, low, pi - 1);
+        await quickSort(arr, pi + 1, high);
       }
-    }
-    [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
-    playTone(valueToFrequency(arr[i + 1], size), noteDuration * 1.5, time);
-    time += noteDuration;
-    return i + 1;
-  };
+    };
 
-  quickSort(array, 0, array.length - 1);
+    const partition = async (arr: number[], low: number, high: number): Promise<number> => {
+      const pivot = arr[high];
+      let i = low - 1;
+
+      for (let j = low; j < high && !activeLoop.stop; j++) {
+        if (arr[j] < pivot) {
+          i++;
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+          playTone(valueToFrequency(arr[i], size), noteDuration, time);
+          time += noteDuration;
+          
+          if (visualCallback) {
+            visualCallback([...arr], [i, j]);
+            await delay(30);
+          }
+        }
+      }
+      [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+      playTone(valueToFrequency(arr[i + 1], size), noteDuration * 1.5, time);
+      time += noteDuration;
+      
+      if (visualCallback) {
+        visualCallback([...arr], [i + 1, high]);
+        await delay(30);
+      }
+      
+      return i + 1;
+    };
+
+    await quickSort(array, 0, array.length - 1);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
 };
 
-export const generateMergeSort = async (size: number = 30) => {
-  const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
-  const ctx = getAudioContext();
-  let time = ctx.currentTime;
-  const noteDuration = 0.04;
+export const generateMergeSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    let time = ctx.currentTime;
+    const noteDuration = 0.04;
 
-  const merge = (arr: number[], left: number, mid: number, right: number) => {
-    const leftArr = arr.slice(left, mid + 1);
-    const rightArr = arr.slice(mid + 1, right + 1);
-    let i = 0, j = 0, k = left;
+    const merge = async (arr: number[], left: number, mid: number, right: number) => {
+      const leftArr = arr.slice(left, mid + 1);
+      const rightArr = arr.slice(mid + 1, right + 1);
+      let i = 0, j = 0, k = left;
 
-    while (i < leftArr.length && j < rightArr.length) {
-      if (leftArr[i] <= rightArr[j]) {
+      while (i < leftArr.length && j < rightArr.length && !activeLoop.stop) {
+        if (leftArr[i] <= rightArr[j]) {
+          arr[k] = leftArr[i];
+          playTone(valueToFrequency(arr[k], size), noteDuration, time);
+          i++;
+        } else {
+          arr[k] = rightArr[j];
+          playTone(valueToFrequency(arr[k], size), noteDuration, time);
+          j++;
+        }
+        time += noteDuration;
+        
+        if (visualCallback) {
+          visualCallback([...arr], [k]);
+          await delay(40);
+        }
+        k++;
+      }
+
+      while (i < leftArr.length && !activeLoop.stop) {
         arr[k] = leftArr[i];
         playTone(valueToFrequency(arr[k], size), noteDuration, time);
         i++;
-      } else {
+        k++;
+        time += noteDuration;
+        
+        if (visualCallback) {
+          visualCallback([...arr], [k - 1]);
+          await delay(40);
+        }
+      }
+
+      while (j < rightArr.length && !activeLoop.stop) {
         arr[k] = rightArr[j];
         playTone(valueToFrequency(arr[k], size), noteDuration, time);
         j++;
+        k++;
+        time += noteDuration;
+        
+        if (visualCallback) {
+          visualCallback([...arr], [k - 1]);
+          await delay(40);
+        }
       }
-      time += noteDuration;
-      k++;
-    }
+    };
 
-    while (i < leftArr.length) {
-      arr[k] = leftArr[i];
-      playTone(valueToFrequency(arr[k], size), noteDuration, time);
-      i++;
-      k++;
-      time += noteDuration;
-    }
-
-    while (j < rightArr.length) {
-      arr[k] = rightArr[j];
-      playTone(valueToFrequency(arr[k], size), noteDuration, time);
-      j++;
-      k++;
-      time += noteDuration;
-    }
-  };
-
-  const mergeSort = (arr: number[], left: number, right: number) => {
-    if (left < right) {
-      const mid = Math.floor((left + right) / 2);
-      mergeSort(arr, left, mid);
-      mergeSort(arr, mid + 1, right);
-      merge(arr, left, mid, right);
-    }
-  };
-
-  mergeSort(array, 0, array.length - 1);
-};
-
-export const generateInsertionSort = async (size: number = 30) => {
-  const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
-  const ctx = getAudioContext();
-  let time = ctx.currentTime;
-  const noteDuration = 0.04;
-
-  for (let i = 1; i < array.length; i++) {
-    const key = array[i];
-    let j = i - 1;
-    while (j >= 0 && array[j] > key) {
-      array[j + 1] = array[j];
-      playTone(valueToFrequency(array[j + 1], size), noteDuration, time);
-      time += noteDuration;
-      j--;
-    }
-    array[j + 1] = key;
-    playTone(valueToFrequency(key, size), noteDuration * 1.2, time);
-    time += noteDuration;
-  }
-};
-
-export const generateSelectionSort = async (size: number = 30) => {
-  const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
-  const ctx = getAudioContext();
-  let time = ctx.currentTime;
-  const noteDuration = 0.06;
-
-  for (let i = 0; i < array.length - 1; i++) {
-    let minIdx = i;
-    for (let j = i + 1; j < array.length; j++) {
-      if (array[j] < array[minIdx]) {
-        minIdx = j;
+    const mergeSort = async (arr: number[], left: number, right: number) => {
+      if (left < right && !activeLoop.stop) {
+        const mid = Math.floor((left + right) / 2);
+        await mergeSort(arr, left, mid);
+        await mergeSort(arr, mid + 1, right);
+        await merge(arr, left, mid, right);
       }
-      playTone(valueToFrequency(array[j], size), noteDuration / 2, time);
-      time += noteDuration / 3;
-    }
-    if (minIdx !== i) {
-      [array[i], array[minIdx]] = [array[minIdx], array[i]];
-      playTone(valueToFrequency(array[i], size), noteDuration * 1.5, time);
-      time += noteDuration;
-    }
+    };
+
+    await mergeSort(array, 0, array.length - 1);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
   }
 };
 
-export const generateHeapSort = async (size: number = 30) => {
-  const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
-  const ctx = getAudioContext();
-  let time = ctx.currentTime;
-  const noteDuration = 0.04;
+export const generateInsertionSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    let time = ctx.currentTime;
+    const noteDuration = 0.04;
 
-  const heapify = (arr: number[], n: number, i: number) => {
-    let largest = i;
-    const left = 2 * i + 1;
-    const right = 2 * i + 2;
-
-    if (left < n && arr[left] > arr[largest]) largest = left;
-    if (right < n && arr[right] > arr[largest]) largest = right;
-
-    if (largest !== i) {
-      [arr[i], arr[largest]] = [arr[largest], arr[i]];
-      playTone(valueToFrequency(arr[i], size), noteDuration, time);
+    for (let i = 1; i < array.length && !activeLoop.stop; i++) {
+      const key = array[i];
+      let j = i - 1;
+      while (j >= 0 && array[j] > key && !activeLoop.stop) {
+        array[j + 1] = array[j];
+        playTone(valueToFrequency(array[j + 1], size), noteDuration, time);
+        time += noteDuration;
+        
+        if (visualCallback) {
+          visualCallback([...array], [j, j + 1]);
+          await delay(40);
+        }
+        j--;
+      }
+      array[j + 1] = key;
+      playTone(valueToFrequency(key, size), noteDuration * 1.2, time);
       time += noteDuration;
-      heapify(arr, n, largest);
+      
+      if (visualCallback) {
+        visualCallback([...array], [j + 1]);
+        await delay(40);
+      }
     }
-  };
-
-  for (let i = Math.floor(array.length / 2) - 1; i >= 0; i--) {
-    heapify(array, array.length, i);
-  }
-
-  for (let i = array.length - 1; i > 0; i--) {
-    [array[0], array[i]] = [array[i], array[0]];
-    playTone(valueToFrequency(array[0], size), noteDuration * 1.2, time);
-    time += noteDuration;
-    heapify(array, i, 0);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
   }
 };
 
-export const sortingFunctions: Record<string, (size?: number) => Promise<void>> = {
+export const generateSelectionSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    let time = ctx.currentTime;
+    const noteDuration = 0.06;
+
+    for (let i = 0; i < array.length - 1 && !activeLoop.stop; i++) {
+      let minIdx = i;
+      for (let j = i + 1; j < array.length && !activeLoop.stop; j++) {
+        if (array[j] < array[minIdx]) {
+          minIdx = j;
+        }
+        playTone(valueToFrequency(array[j], size), noteDuration / 2, time);
+        time += noteDuration / 3;
+        
+        if (visualCallback) {
+          visualCallback([...array], [i, j, minIdx]);
+          await delay(60);
+        }
+      }
+      if (minIdx !== i) {
+        [array[i], array[minIdx]] = [array[minIdx], array[i]];
+        playTone(valueToFrequency(array[i], size), noteDuration * 1.5, time);
+        time += noteDuration;
+        
+        if (visualCallback) {
+          visualCallback([...array], [i, minIdx]);
+          await delay(60);
+        }
+      }
+    }
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+export const generateHeapSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    let time = ctx.currentTime;
+    const noteDuration = 0.04;
+
+    const heapify = async (arr: number[], n: number, i: number) => {
+      let largest = i;
+      const left = 2 * i + 1;
+      const right = 2 * i + 2;
+
+      if (left < n && arr[left] > arr[largest]) largest = left;
+      if (right < n && arr[right] > arr[largest]) largest = right;
+
+      if (largest !== i && !activeLoop.stop) {
+        [arr[i], arr[largest]] = [arr[largest], arr[i]];
+        playTone(valueToFrequency(arr[i], size), noteDuration, time);
+        time += noteDuration;
+        
+        if (visualCallback) {
+          visualCallback([...arr], [i, largest]);
+          await delay(40);
+        }
+        
+        await heapify(arr, n, largest);
+      }
+    };
+
+    for (let i = Math.floor(array.length / 2) - 1; i >= 0 && !activeLoop.stop; i--) {
+      await heapify(array, array.length, i);
+    }
+
+    for (let i = array.length - 1; i > 0 && !activeLoop.stop; i--) {
+      [array[0], array[i]] = [array[i], array[0]];
+      playTone(valueToFrequency(array[0], size), noteDuration * 1.2, time);
+      time += noteDuration;
+      
+      if (visualCallback) {
+        visualCallback([...array], [0, i]);
+        await delay(40);
+      }
+      
+      await heapify(array, i, 0);
+    }
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+export const sortingFunctions: Record<string, (size?: number, visualCallback?: VisualCallback, loop?: boolean) => Promise<void>> = {
   bubble: generateBubbleSort,
   quick: generateQuickSort,
   merge: generateMergeSort,

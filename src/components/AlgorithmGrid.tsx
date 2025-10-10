@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { AlgorithmCard } from "./AlgorithmCard";
-import { sortingAlgorithms, sortingFunctions } from "@/utils/audioGenerator";
+import { sortingAlgorithms, sortingFunctions, stopAllSorting, type VisualCallback } from "@/utils/audioGenerator";
 import { Input } from "@/components/ui/input";
 import { Search } from "lucide-react";
 import { toast } from "sonner";
@@ -8,6 +8,8 @@ import { toast } from "sonner";
 export const AlgorithmGrid = () => {
   const [playingId, setPlayingId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [visualArrays, setVisualArrays] = useState<Record<string, number[]>>({});
+  const [highlightIndices, setHighlightIndices] = useState<Record<string, number[]>>({});
 
   const filteredAlgorithms = sortingAlgorithms.filter(algo =>
     algo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -17,8 +19,11 @@ export const AlgorithmGrid = () => {
 
   const handlePlay = async (id: string) => {
     if (playingId) {
-      toast.info("Stop the current algorithm first");
-      return;
+      stopAllSorting();
+      setPlayingId(null);
+      setVisualArrays({});
+      setHighlightIndices({});
+      toast.info("Stopped current algorithm");
     }
 
     setPlayingId(id);
@@ -27,18 +32,24 @@ export const AlgorithmGrid = () => {
     try {
       const sortFn = sortingFunctions[id];
       if (sortFn) {
-        await sortFn();
+        const visualCallback: VisualCallback = (array, indices) => {
+          setVisualArrays(prev => ({ ...prev, [id]: array }));
+          setHighlightIndices(prev => ({ ...prev, [id]: indices || [] }));
+        };
+        
+        await sortFn(60, visualCallback, true);
       }
     } catch (error) {
       console.error('Error playing algorithm:', error);
       toast.error("Error playing algorithm");
-    } finally {
-      setPlayingId(null);
     }
   };
 
   const handleStop = () => {
+    stopAllSorting();
     setPlayingId(null);
+    setVisualArrays({});
+    setHighlightIndices({});
     toast.info("Stopped");
   };
 
@@ -78,10 +89,12 @@ export const AlgorithmGrid = () => {
               style={{ animationDelay: `${0.1 + index * 0.05}s` }}
             >
               <AlgorithmCard
-                algorithm={algorithm}
-                isPlaying={playingId === algorithm.id}
-                onPlay={() => handlePlay(algorithm.id)}
-                onStop={handleStop}
+            algorithm={algorithm}
+            isPlaying={playingId === algorithm.id}
+            onPlay={() => handlePlay(algorithm.id)}
+            onStop={handleStop}
+            visualArray={visualArrays[algorithm.id]}
+            highlightIndices={highlightIndices[algorithm.id]}
               />
             </div>
           ))}

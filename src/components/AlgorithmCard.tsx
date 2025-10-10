@@ -2,6 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Play, Pause, Info } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { useState } from "react";
 import type { SortingAlgorithm } from "@/utils/audioGenerator";
 
 interface AlgorithmCardProps {
@@ -9,9 +10,13 @@ interface AlgorithmCardProps {
   isPlaying: boolean;
   onPlay: () => void;
   onStop: () => void;
+  visualArray?: number[];
+  highlightIndices?: number[];
 }
 
-export const AlgorithmCard = ({ algorithm, isPlaying, onPlay, onStop }: AlgorithmCardProps) => {
+export const AlgorithmCard = ({ algorithm, isPlaying, onPlay, onStop, visualArray, highlightIndices }: AlgorithmCardProps) => {
+  const maxValue = visualArray ? Math.max(...visualArray) : 60;
+  
   return (
     <Card className="group relative overflow-hidden bg-gradient-card backdrop-blur-md border-border/50 hover:border-primary/50 transition-all duration-300 hover:shadow-glow-primary hover:-translate-y-1">
       <div className={`absolute inset-0 bg-gradient-to-br ${algorithm.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`} />
@@ -48,19 +53,37 @@ export const AlgorithmCard = ({ algorithm, isPlaying, onPlay, onStop }: Algorith
         </div>
 
         {/* Visualization Bars */}
-        <div className="flex items-end gap-1 h-16 mb-4">
-          {Array.from({ length: 12 }).map((_, i) => (
-            <div
-              key={i}
-              className={`flex-1 bg-gradient-to-t ${algorithm.color} rounded-sm transition-all duration-300 ${
-                isPlaying ? 'animate-pulse' : ''
-              }`}
-              style={{
-                height: `${20 + Math.random() * 80}%`,
-                animationDelay: `${i * 0.1}s`,
-              }}
-            />
-          ))}
+        <div className="flex items-end gap-0.5 h-24 mb-4 bg-background/50 rounded-md p-2">
+          {visualArray && visualArray.length > 0 ? (
+            visualArray.map((value, i) => {
+              const isHighlighted = highlightIndices?.includes(i);
+              return (
+                <div
+                  key={i}
+                  className={`flex-1 rounded-sm transition-all duration-150 ${
+                    isHighlighted 
+                      ? `bg-gradient-to-t ${algorithm.color}` 
+                      : 'bg-gradient-to-t from-muted to-muted-foreground/30'
+                  }`}
+                  style={{
+                    height: `${(value / maxValue) * 100}%`,
+                    minWidth: '2px',
+                  }}
+                />
+              );
+            })
+          ) : (
+            Array.from({ length: 40 }).map((_, i) => (
+              <div
+                key={i}
+                className={`flex-1 bg-gradient-to-t ${algorithm.color} rounded-sm opacity-30`}
+                style={{
+                  height: `${20 + Math.random() * 80}%`,
+                  minWidth: '2px',
+                }}
+              />
+            ))
+          )}
         </div>
 
         {/* Play Button */}
