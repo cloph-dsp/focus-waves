@@ -83,16 +83,16 @@ export const generateBubbleSort = async (size: number = 60, visualCallback?: Vis
   while (!activeLoop.stop) {
     const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
     const ctx = getAudioContext();
-    let time = ctx.currentTime;
     const noteDuration = 0.05;
 
     for (let i = 0; i < array.length && !activeLoop.stop; i++) {
       for (let j = 0; j < array.length - i - 1 && !activeLoop.stop; j++) {
         if (array[j] > array[j + 1]) {
           [array[j], array[j + 1]] = [array[j + 1], array[j]];
-          playTone(valueToFrequency(array[j], size), noteDuration, time);
-          playTone(valueToFrequency(array[j + 1], size), noteDuration, time + noteDuration / 2);
-          time += noteDuration;
+          
+          const now = ctx.currentTime;
+          playTone(valueToFrequency(array[j], size), noteDuration, now);
+          playTone(valueToFrequency(array[j + 1], size), noteDuration, now + noteDuration / 2);
           
           if (visualCallback) {
             visualCallback([...array], [j, j + 1]);
@@ -103,7 +103,7 @@ export const generateBubbleSort = async (size: number = 60, visualCallback?: Vis
     }
     
     if (!loop || activeLoop.stop) break;
-    await delay(500); // Pause before next iteration
+    await delay(500);
   }
 };
 
@@ -113,7 +113,6 @@ export const generateQuickSort = async (size: number = 60, visualCallback?: Visu
   while (!activeLoop.stop) {
     const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
     const ctx = getAudioContext();
-    let time = ctx.currentTime;
     const noteDuration = 0.03;
 
     const quickSort = async (arr: number[], low: number, high: number) => {
@@ -132,8 +131,9 @@ export const generateQuickSort = async (size: number = 60, visualCallback?: Visu
         if (arr[j] < pivot) {
           i++;
           [arr[i], arr[j]] = [arr[j], arr[i]];
-          playTone(valueToFrequency(arr[i], size), noteDuration, time);
-          time += noteDuration;
+          
+          const now = ctx.currentTime;
+          playTone(valueToFrequency(arr[i], size), noteDuration, now);
           
           if (visualCallback) {
             visualCallback([...arr], [i, j]);
@@ -142,8 +142,9 @@ export const generateQuickSort = async (size: number = 60, visualCallback?: Visu
         }
       }
       [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
-      playTone(valueToFrequency(arr[i + 1], size), noteDuration * 1.5, time);
-      time += noteDuration;
+      
+      const now = ctx.currentTime;
+      playTone(valueToFrequency(arr[i + 1], size), noteDuration * 1.5, now);
       
       if (visualCallback) {
         visualCallback([...arr], [i + 1, high]);
@@ -166,7 +167,6 @@ export const generateMergeSort = async (size: number = 60, visualCallback?: Visu
   while (!activeLoop.stop) {
     const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
     const ctx = getAudioContext();
-    let time = ctx.currentTime;
     const noteDuration = 0.04;
 
     const merge = async (arr: number[], left: number, mid: number, right: number) => {
@@ -177,14 +177,13 @@ export const generateMergeSort = async (size: number = 60, visualCallback?: Visu
       while (i < leftArr.length && j < rightArr.length && !activeLoop.stop) {
         if (leftArr[i] <= rightArr[j]) {
           arr[k] = leftArr[i];
-          playTone(valueToFrequency(arr[k], size), noteDuration, time);
+          playTone(valueToFrequency(arr[k], size), noteDuration, ctx.currentTime);
           i++;
         } else {
           arr[k] = rightArr[j];
-          playTone(valueToFrequency(arr[k], size), noteDuration, time);
+          playTone(valueToFrequency(arr[k], size), noteDuration, ctx.currentTime);
           j++;
         }
-        time += noteDuration;
         
         if (visualCallback) {
           visualCallback([...arr], [k]);
@@ -195,10 +194,9 @@ export const generateMergeSort = async (size: number = 60, visualCallback?: Visu
 
       while (i < leftArr.length && !activeLoop.stop) {
         arr[k] = leftArr[i];
-        playTone(valueToFrequency(arr[k], size), noteDuration, time);
+        playTone(valueToFrequency(arr[k], size), noteDuration, ctx.currentTime);
         i++;
         k++;
-        time += noteDuration;
         
         if (visualCallback) {
           visualCallback([...arr], [k - 1]);
@@ -208,10 +206,9 @@ export const generateMergeSort = async (size: number = 60, visualCallback?: Visu
 
       while (j < rightArr.length && !activeLoop.stop) {
         arr[k] = rightArr[j];
-        playTone(valueToFrequency(arr[k], size), noteDuration, time);
+        playTone(valueToFrequency(arr[k], size), noteDuration, ctx.currentTime);
         j++;
         k++;
-        time += noteDuration;
         
         if (visualCallback) {
           visualCallback([...arr], [k - 1]);
@@ -242,7 +239,6 @@ export const generateInsertionSort = async (size: number = 60, visualCallback?: 
   while (!activeLoop.stop) {
     const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
     const ctx = getAudioContext();
-    let time = ctx.currentTime;
     const noteDuration = 0.04;
 
     for (let i = 1; i < array.length && !activeLoop.stop; i++) {
@@ -250,8 +246,7 @@ export const generateInsertionSort = async (size: number = 60, visualCallback?: 
       let j = i - 1;
       while (j >= 0 && array[j] > key && !activeLoop.stop) {
         array[j + 1] = array[j];
-        playTone(valueToFrequency(array[j + 1], size), noteDuration, time);
-        time += noteDuration;
+        playTone(valueToFrequency(array[j + 1], size), noteDuration, ctx.currentTime);
         
         if (visualCallback) {
           visualCallback([...array], [j, j + 1]);
@@ -260,8 +255,7 @@ export const generateInsertionSort = async (size: number = 60, visualCallback?: 
         j--;
       }
       array[j + 1] = key;
-      playTone(valueToFrequency(key, size), noteDuration * 1.2, time);
-      time += noteDuration;
+      playTone(valueToFrequency(key, size), noteDuration * 1.2, ctx.currentTime);
       
       if (visualCallback) {
         visualCallback([...array], [j + 1]);
@@ -280,7 +274,6 @@ export const generateSelectionSort = async (size: number = 60, visualCallback?: 
   while (!activeLoop.stop) {
     const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
     const ctx = getAudioContext();
-    let time = ctx.currentTime;
     const noteDuration = 0.06;
 
     for (let i = 0; i < array.length - 1 && !activeLoop.stop; i++) {
@@ -289,8 +282,7 @@ export const generateSelectionSort = async (size: number = 60, visualCallback?: 
         if (array[j] < array[minIdx]) {
           minIdx = j;
         }
-        playTone(valueToFrequency(array[j], size), noteDuration / 2, time);
-        time += noteDuration / 3;
+        playTone(valueToFrequency(array[j], size), noteDuration / 2, ctx.currentTime);
         
         if (visualCallback) {
           visualCallback([...array], [i, j, minIdx]);
@@ -299,8 +291,7 @@ export const generateSelectionSort = async (size: number = 60, visualCallback?: 
       }
       if (minIdx !== i) {
         [array[i], array[minIdx]] = [array[minIdx], array[i]];
-        playTone(valueToFrequency(array[i], size), noteDuration * 1.5, time);
-        time += noteDuration;
+        playTone(valueToFrequency(array[i], size), noteDuration * 1.5, ctx.currentTime);
         
         if (visualCallback) {
           visualCallback([...array], [i, minIdx]);
@@ -320,7 +311,6 @@ export const generateHeapSort = async (size: number = 60, visualCallback?: Visua
   while (!activeLoop.stop) {
     const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
     const ctx = getAudioContext();
-    let time = ctx.currentTime;
     const noteDuration = 0.04;
 
     const heapify = async (arr: number[], n: number, i: number) => {
@@ -333,8 +323,7 @@ export const generateHeapSort = async (size: number = 60, visualCallback?: Visua
 
       if (largest !== i && !activeLoop.stop) {
         [arr[i], arr[largest]] = [arr[largest], arr[i]];
-        playTone(valueToFrequency(arr[i], size), noteDuration, time);
-        time += noteDuration;
+        playTone(valueToFrequency(arr[i], size), noteDuration, ctx.currentTime);
         
         if (visualCallback) {
           visualCallback([...arr], [i, largest]);
@@ -351,8 +340,7 @@ export const generateHeapSort = async (size: number = 60, visualCallback?: Visua
 
     for (let i = array.length - 1; i > 0 && !activeLoop.stop; i--) {
       [array[0], array[i]] = [array[i], array[0]];
-      playTone(valueToFrequency(array[0], size), noteDuration * 1.2, time);
-      time += noteDuration;
+      playTone(valueToFrequency(array[0], size), noteDuration * 1.2, ctx.currentTime);
       
       if (visualCallback) {
         visualCallback([...array], [0, i]);
