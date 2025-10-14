@@ -57,29 +57,29 @@ export const AlgorithmGrid = () => {
   const maxValue = visualArrays[playingId || ''] ? Math.max(...visualArrays[playingId || '']) : 60;
 
   return (
-    <section className="h-screen flex flex-col px-4 py-3 overflow-hidden">
+    <section className="h-screen flex flex-col px-4 py-2 overflow-hidden">
       <div className="container mx-auto flex-1 flex flex-col min-h-0">
-        {/* Smaller Header */}
-        <div className="text-center mb-3">
-          <h1 className="text-xl font-bold bg-gradient-primary bg-clip-text text-transparent">
+        {/* Compact Header */}
+        <div className="text-center mb-2">
+          <h1 className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
             Sort Your Mind
           </h1>
         </div>
 
         {/* Central Visualizer */}
-        <div className="flex flex-col bg-gradient-card backdrop-blur-md border border-border/50 rounded-lg p-4 mb-4 h-[45vh]">
-          <div className="mb-3">
-            <h2 className="text-base font-semibold text-foreground mb-1">
+        <div className="flex flex-col bg-gradient-card backdrop-blur-md border border-border/50 rounded-lg p-3 mb-3 h-[40vh]">
+          <div className="mb-2">
+            <h2 className="text-sm font-semibold text-foreground mb-0.5">
               {currentAlgorithm ? currentAlgorithm.name : 'Visualizer'}
             </h2>
             {currentAlgorithm && (
-              <p className="text-xs text-muted-foreground">
+              <p className="text-xs text-muted-foreground line-clamp-1">
                 {currentAlgorithm.description}
               </p>
             )}
           </div>
 
-          <div className="flex-1 flex items-end gap-0.5 bg-background/50 rounded-md p-3 min-h-0">
+          <div className="flex-1 flex items-end gap-0.5 bg-background/50 rounded-md p-2 min-h-0">
             {visualArrays[playingId || ''] && visualArrays[playingId || ''].length > 0 ? (
               visualArrays[playingId || ''].map((value, i) => {
                 const isHighlighted = highlightIndices[playingId || '']?.includes(i);
@@ -100,7 +100,7 @@ export const AlgorithmGrid = () => {
               })
             ) : (
               <div className="flex-1 flex items-center justify-center">
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-xs">
                   Select an algorithm to begin
                 </p>
               </div>
@@ -108,12 +108,12 @@ export const AlgorithmGrid = () => {
           </div>
 
           {playingId && (
-            <div className="mt-3">
+            <div className="mt-2">
               <button
                 onClick={handleStop}
-                className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground py-2 px-4 rounded-md transition-colors flex items-center justify-center gap-2 text-sm"
+                className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground py-1.5 px-3 rounded-md transition-colors flex items-center justify-center gap-2 text-xs font-medium"
               >
-                <Pause className="w-4 h-4" />
+                <Pause className="w-3 h-3" />
                 Stop
               </button>
             </div>
@@ -123,22 +123,22 @@ export const AlgorithmGrid = () => {
         {/* Algorithm Options Below */}
         <div className="flex flex-col min-h-0 flex-1">
           {/* Search */}
-          <div className="mb-3">
+          <div className="mb-2">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
               <Input
                 type="text"
                 placeholder="Search algorithms..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 h-9 bg-card/50 backdrop-blur-sm border-border/50 focus:border-primary/50 transition-colors"
+                className="pl-8 h-8 text-xs bg-card/50 backdrop-blur-sm border-border/50 focus:border-primary/50 transition-colors"
               />
             </div>
           </div>
 
-          {/* Scrollable Grid */}
-          <div className="flex-1 overflow-y-auto pr-2 min-h-0">
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+          {/* Optimized Scrollable Grid */}
+          <div className="flex-1 overflow-y-auto pr-1 min-h-0 scrollbar-thin">
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2">
               {filteredAlgorithms.map((algorithm) => (
                 <AlgorithmCard
                   key={algorithm.id}
@@ -150,8 +150,8 @@ export const AlgorithmGrid = () => {
             </div>
 
             {filteredAlgorithms.length === 0 && (
-              <div className="text-center py-12">
-                <p className="text-sm text-muted-foreground">No algorithms found</p>
+              <div className="text-center py-8">
+                <p className="text-xs text-muted-foreground">No algorithms found</p>
               </div>
             )}
           </div>
