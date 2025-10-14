@@ -355,6 +355,432 @@ export const generateHeapSort = async (size: number = 60, visualCallback?: Visua
   }
 };
 
+// Shell Sort - Gap sequence creates rhythmic patterns
+export const generateShellSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+
+    for (let gap = Math.floor(array.length / 2); gap > 0 && !activeLoop.stop; gap = Math.floor(gap / 2)) {
+      for (let i = gap; i < array.length && !activeLoop.stop; i++) {
+        const temp = array[i];
+        let j = i;
+        
+        while (j >= gap && array[j - gap] > temp && !activeLoop.stop) {
+          array[j] = array[j - gap];
+          playTone(valueToFrequency(array[j], size), noteDuration, ctx.currentTime);
+          
+          if (visualCallback) {
+            visualCallback([...array], [j, j - gap]);
+            await delay(35);
+          }
+          j -= gap;
+        }
+        array[j] = temp;
+      }
+    }
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Cocktail Sort - Bidirectional bubble creates flowing back-and-forth sounds
+export const generateCocktailSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.05;
+    let swapped = true;
+    let start = 0;
+    let end = array.length - 1;
+
+    while (swapped && !activeLoop.stop) {
+      swapped = false;
+      
+      // Forward pass
+      for (let i = start; i < end && !activeLoop.stop; i++) {
+        if (array[i] > array[i + 1]) {
+          [array[i], array[i + 1]] = [array[i + 1], array[i]];
+          playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+          swapped = true;
+          
+          if (visualCallback) {
+            visualCallback([...array], [i, i + 1]);
+            await delay(45);
+          }
+        }
+      }
+      end--;
+      
+      if (!swapped || activeLoop.stop) break;
+      swapped = false;
+      
+      // Backward pass
+      for (let i = end - 1; i >= start && !activeLoop.stop; i--) {
+        if (array[i] > array[i + 1]) {
+          [array[i], array[i + 1]] = [array[i + 1], array[i]];
+          playTone(valueToFrequency(array[i + 1], size), noteDuration, ctx.currentTime);
+          swapped = true;
+          
+          if (visualCallback) {
+            visualCallback([...array], [i, i + 1]);
+            await delay(45);
+          }
+        }
+      }
+      start++;
+    }
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Comb Sort - Shrinking gaps create interesting pitch patterns
+export const generateCombSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    const shrink = 1.3;
+    let gap = array.length;
+    let sorted = false;
+
+    while (!sorted && !activeLoop.stop) {
+      gap = Math.floor(gap / shrink);
+      if (gap <= 1) {
+        gap = 1;
+        sorted = true;
+      }
+
+      for (let i = 0; i + gap < array.length && !activeLoop.stop; i++) {
+        if (array[i] > array[i + gap]) {
+          [array[i], array[i + gap]] = [array[i + gap], array[i]];
+          playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+          sorted = false;
+          
+          if (visualCallback) {
+            visualCallback([...array], [i, i + gap]);
+            await delay(30);
+          }
+        }
+      }
+    }
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Gnome Sort - Simple back-and-forth creates a unique rhythm
+export const generateGnomeSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.05;
+    let i = 0;
+
+    while (i < array.length && !activeLoop.stop) {
+      if (i === 0 || array[i] >= array[i - 1]) {
+        playTone(valueToFrequency(array[i], size), noteDuration / 2, ctx.currentTime);
+        i++;
+      } else {
+        [array[i], array[i - 1]] = [array[i - 1], array[i]];
+        playTone(valueToFrequency(array[i - 1], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...array], [i, i - 1]);
+          await delay(40);
+        }
+        i--;
+      }
+    }
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Odd-Even Sort - Alternating phases create distinct patterns
+export const generateOddEvenSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    let sorted = false;
+
+    while (!sorted && !activeLoop.stop) {
+      sorted = true;
+      
+      // Odd phase
+      for (let i = 1; i < array.length - 1 && !activeLoop.stop; i += 2) {
+        if (array[i] > array[i + 1]) {
+          [array[i], array[i + 1]] = [array[i + 1], array[i]];
+          playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+          sorted = false;
+          
+          if (visualCallback) {
+            visualCallback([...array], [i, i + 1]);
+            await delay(35);
+          }
+        }
+      }
+      
+      // Even phase
+      for (let i = 0; i < array.length - 1 && !activeLoop.stop; i += 2) {
+        if (array[i] > array[i + 1]) {
+          [array[i], array[i + 1]] = [array[i + 1], array[i]];
+          playTone(valueToFrequency(array[i + 1], size), noteDuration, ctx.currentTime);
+          sorted = false;
+          
+          if (visualCallback) {
+            visualCallback([...array], [i, i + 1]);
+            await delay(35);
+          }
+        }
+      }
+    }
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Radix Sort - Digit processing creates layered harmonic patterns
+export const generateRadixSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    
+    const getMax = (arr: number[]) => Math.max(...arr);
+    
+    const countingSort = async (arr: number[], exp: number) => {
+      const output = new Array(arr.length);
+      const count = new Array(10).fill(0);
+      
+      for (let i = 0; i < arr.length; i++) {
+        const digit = Math.floor(arr[i] / exp) % 10;
+        count[digit]++;
+      }
+      
+      for (let i = 1; i < 10; i++) {
+        count[i] += count[i - 1];
+      }
+      
+      for (let i = arr.length - 1; i >= 0 && !activeLoop.stop; i--) {
+        const digit = Math.floor(arr[i] / exp) % 10;
+        output[count[digit] - 1] = arr[i];
+        playTone(valueToFrequency(arr[i], size), noteDuration, ctx.currentTime);
+        count[digit]--;
+        
+        if (visualCallback) {
+          const tempArr = [...arr];
+          for (let j = 0; j < output.length; j++) {
+            if (output[j] !== undefined) tempArr[j] = output[j];
+          }
+          visualCallback(tempArr, [i]);
+          await delay(25);
+        }
+      }
+      
+      for (let i = 0; i < arr.length; i++) {
+        arr[i] = output[i];
+      }
+    };
+    
+    const max = getMax(array);
+    for (let exp = 1; Math.floor(max / exp) > 0 && !activeLoop.stop; exp *= 10) {
+      await countingSort(array, exp);
+    }
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Counting Sort - Integer counting creates clear sequential tones
+export const generateCountingSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    
+    const max = Math.max(...array);
+    const count = new Array(max + 1).fill(0);
+    
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      count[array[i]]++;
+    }
+    
+    let index = 0;
+    for (let i = 0; i <= max && !activeLoop.stop; i++) {
+      while (count[i] > 0 && !activeLoop.stop) {
+        array[index] = i;
+        playTone(valueToFrequency(i, size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...array], [index]);
+          await delay(30);
+        }
+        
+        index++;
+        count[i]--;
+      }
+    }
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Bucket Sort - Distribution creates smooth flowing sounds
+export const generateBucketSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    
+    const bucketCount = 10;
+    const buckets: number[][] = Array.from({ length: bucketCount }, () => []);
+    const max = Math.max(...array);
+    
+    // Distribute into buckets
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      const bucketIndex = Math.min(Math.floor((array[i] / max) * (bucketCount - 1)), bucketCount - 1);
+      buckets[bucketIndex].push(array[i]);
+      playTone(valueToFrequency(array[i], size), noteDuration / 2, ctx.currentTime);
+    }
+    
+    // Sort each bucket and place back
+    let index = 0;
+    for (let i = 0; i < bucketCount && !activeLoop.stop; i++) {
+      buckets[i].sort((a, b) => a - b);
+      for (let j = 0; j < buckets[i].length && !activeLoop.stop; j++) {
+        array[index] = buckets[i][j];
+        playTone(valueToFrequency(array[index], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...array], [index]);
+          await delay(35);
+        }
+        index++;
+      }
+    }
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Tim Sort - Hybrid approach creates complex layered patterns
+export const generateTimSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    const RUN = 32;
+    
+    // Insertion sort for small runs
+    const insertionSort = async (arr: number[], left: number, right: number) => {
+      for (let i = left + 1; i <= right && !activeLoop.stop; i++) {
+        const temp = arr[i];
+        let j = i - 1;
+        while (j >= left && arr[j] > temp && !activeLoop.stop) {
+          arr[j + 1] = arr[j];
+          playTone(valueToFrequency(arr[j + 1], size), noteDuration, ctx.currentTime);
+          
+          if (visualCallback) {
+            visualCallback([...arr], [j, j + 1]);
+            await delay(25);
+          }
+          j--;
+        }
+        arr[j + 1] = temp;
+      }
+    };
+    
+    // Merge function
+    const merge = async (arr: number[], l: number, m: number, r: number) => {
+      const len1 = m - l + 1;
+      const len2 = r - m;
+      const left = arr.slice(l, m + 1);
+      const right = arr.slice(m + 1, r + 1);
+      
+      let i = 0, j = 0, k = l;
+      
+      while (i < len1 && j < len2 && !activeLoop.stop) {
+        if (left[i] <= right[j]) {
+          arr[k] = left[i];
+          i++;
+        } else {
+          arr[k] = right[j];
+          j++;
+        }
+        playTone(valueToFrequency(arr[k], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...arr], [k]);
+          await delay(25);
+        }
+        k++;
+      }
+      
+      while (i < len1 && !activeLoop.stop) {
+        arr[k] = left[i];
+        i++;
+        k++;
+      }
+      
+      while (j < len2 && !activeLoop.stop) {
+        arr[k] = right[j];
+        j++;
+        k++;
+      }
+    };
+    
+    // Sort individual runs
+    for (let i = 0; i < array.length && !activeLoop.stop; i += RUN) {
+      await insertionSort(array, i, Math.min(i + RUN - 1, array.length - 1));
+    }
+    
+    // Merge runs
+    for (let runSize = RUN; runSize < array.length && !activeLoop.stop; runSize *= 2) {
+      for (let left = 0; left < array.length && !activeLoop.stop; left += runSize * 2) {
+        const mid = left + runSize - 1;
+        const right = Math.min(left + runSize * 2 - 1, array.length - 1);
+        
+        if (mid < right) {
+          await merge(array, left, mid, right);
+        }
+      }
+    }
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
 export const sortingFunctions: Record<string, (size?: number, visualCallback?: VisualCallback, loop?: boolean) => Promise<void>> = {
   bubble: generateBubbleSort,
   quick: generateQuickSort,
@@ -362,13 +788,13 @@ export const sortingFunctions: Record<string, (size?: number, visualCallback?: V
   insertion: generateInsertionSort,
   selection: generateSelectionSort,
   heap: generateHeapSort,
-  shell: generateBubbleSort, // Using bubble as placeholder
-  cocktail: generateBubbleSort,
-  comb: generateBubbleSort,
-  gnome: generateInsertionSort,
-  'odd-even': generateBubbleSort,
-  radix: generateQuickSort,
-  counting: generateQuickSort,
-  bucket: generateMergeSort,
-  tim: generateMergeSort,
+  shell: generateShellSort,
+  cocktail: generateCocktailSort,
+  comb: generateCombSort,
+  gnome: generateGnomeSort,
+  'odd-even': generateOddEvenSort,
+  radix: generateRadixSort,
+  counting: generateCountingSort,
+  bucket: generateBucketSort,
+  tim: generateTimSort,
 };
