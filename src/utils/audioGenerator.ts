@@ -87,6 +87,11 @@ export const sortingAlgorithms: SortingAlgorithm[] = [
   { id: 'bead', name: 'Bead Sort', description: 'Gravity simulation with cascading falls', category: 'Physics', complexity: 'O(n) or O(S)', color: 'from-stone-500 to-zinc-500' },
   { id: 'slow', name: 'Slow Sort', description: 'Deliberately inefficient multiply-and-surrender', category: 'Silly', complexity: 'Ω(n^(log n / 2))', color: 'from-slate-500 to-gray-500' },
   { id: 'bogobogo', name: 'Bogobogo Sort', description: 'Extreme chaos - bogo sort recursively', category: 'Chaos', complexity: 'O(∞)', color: 'from-rose-500 to-red-500' },
+  { id: 'binary-insertion', name: 'Binary Insertion', description: 'Optimized insertion with binary search', category: 'Simple', complexity: 'O(n²)', color: 'from-orange-500 to-amber-500' },
+  { id: 'tree', name: 'Tree Sort', description: 'Binary search tree in-order traversal', category: 'Tree-based', complexity: 'O(n log n)', color: 'from-green-500 to-lime-500' },
+  { id: 'intro', name: 'Intro Sort', description: 'Hybrid quick-heap-insertion (used in std::sort)', category: 'Hybrid', complexity: 'O(n log n)', color: 'from-violet-500 to-purple-500' },
+  { id: 'smooth', name: 'Smooth Sort', description: 'Leonardo heap with smooth transitions', category: 'Efficient', complexity: 'O(n log n)', color: 'from-indigo-500 to-blue-500' },
+  { id: 'strand', name: 'Strand Sort', description: 'Extract sorted sublists and merge', category: 'Merge-based', complexity: 'O(n²)', color: 'from-cyan-500 to-sky-500' },
 ];
 
 // Helper to create delay for visual updates
@@ -1221,6 +1226,364 @@ export const generateBogobogoSort = async (size: number = 20, visualCallback?: V
   }
 };
 
+// Binary Insertion Sort - Uses binary search to find insertion point
+export const generateBinaryInsertionSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    
+    const binarySearch = (arr: number[], item: number, low: number, high: number) => {
+      while (low <= high) {
+        const mid = Math.floor((low + high) / 2);
+        if (item < arr[mid]) {
+          high = mid - 1;
+        } else {
+          low = mid + 1;
+        }
+      }
+      return low;
+    };
+    
+    for (let i = 1; i < array.length && !activeLoop.stop; i++) {
+      const key = array[i];
+      const pos = binarySearch(array, key, 0, i - 1);
+      
+      playTone(valueToFrequency(key, size), noteDuration * 1.3, ctx.currentTime);
+      
+      for (let j = i - 1; j >= pos && !activeLoop.stop; j--) {
+        array[j + 1] = array[j];
+        playTone(valueToFrequency(array[j + 1], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...array], [j, j + 1]);
+          await delay(35);
+        }
+      }
+      array[pos] = key;
+      
+      if (visualCallback) {
+        visualCallback([...array], [pos]);
+        await delay(35);
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Tree Sort - Binary Search Tree based
+export const generateTreeSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    
+    class TreeNode {
+      value: number;
+      left: TreeNode | null = null;
+      right: TreeNode | null = null;
+      
+      constructor(value: number) {
+        this.value = value;
+      }
+    }
+    
+    const insert = async (root: TreeNode | null, value: number): Promise<TreeNode> => {
+      if (!root) {
+        playTone(valueToFrequency(value, size), noteDuration, ctx.currentTime);
+        return new TreeNode(value);
+      }
+      
+      if (value < root.value) {
+        root.left = await insert(root.left, value);
+      } else {
+        root.right = await insert(root.right, value);
+      }
+      
+      return root;
+    };
+    
+    const inorderTraversal = async (root: TreeNode | null, result: number[]) => {
+      if (root && !activeLoop.stop) {
+        await inorderTraversal(root.left, result);
+        result.push(root.value);
+        playTone(valueToFrequency(root.value, size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...result, ...Array(array.length - result.length).fill(0)], [result.length - 1]);
+          await delay(40);
+        }
+        
+        await inorderTraversal(root.right, result);
+      }
+    };
+    
+    let root: TreeNode | null = null;
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      root = await insert(root, array[i]);
+    }
+    
+    const sorted: number[] = [];
+    await inorderTraversal(root, sorted);
+    
+    for (let i = 0; i < sorted.length; i++) {
+      array[i] = sorted[i];
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Intro Sort - Hybrid of QuickSort, HeapSort, and InsertionSort
+export const generateIntroSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    const maxDepth = Math.floor(Math.log2(array.length)) * 2;
+    
+    const insertionSort = async (arr: number[], left: number, right: number) => {
+      for (let i = left + 1; i <= right && !activeLoop.stop; i++) {
+        const key = arr[i];
+        let j = i - 1;
+        while (j >= left && arr[j] > key && !activeLoop.stop) {
+          arr[j + 1] = arr[j];
+          playTone(valueToFrequency(arr[j + 1], size), noteDuration, ctx.currentTime);
+          
+          if (visualCallback) {
+            visualCallback([...arr], [j, j + 1]);
+            await delay(30);
+          }
+          j--;
+        }
+        arr[j + 1] = key;
+      }
+    };
+    
+    const heapify = async (arr: number[], n: number, i: number) => {
+      let largest = i;
+      const left = 2 * i + 1;
+      const right = 2 * i + 2;
+      
+      if (left < n && arr[left] > arr[largest]) largest = left;
+      if (right < n && arr[right] > arr[largest]) largest = right;
+      
+      if (largest !== i && !activeLoop.stop) {
+        [arr[i], arr[largest]] = [arr[largest], arr[i]];
+        playTone(valueToFrequency(arr[i], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...arr], [i, largest]);
+          await delay(30);
+        }
+        
+        await heapify(arr, n, largest);
+      }
+    };
+    
+    const heapSort = async (arr: number[], left: number, right: number) => {
+      const n = right - left + 1;
+      
+      for (let i = Math.floor(n / 2) - 1; i >= 0 && !activeLoop.stop; i--) {
+        await heapify(arr.slice(left, right + 1), n, i);
+      }
+      
+      const temp = arr.slice(left, right + 1);
+      for (let i = n - 1; i > 0 && !activeLoop.stop; i--) {
+        [temp[0], temp[i]] = [temp[i], temp[0]];
+        await heapify(temp, i, 0);
+      }
+      
+      for (let i = 0; i < n; i++) {
+        arr[left + i] = temp[i];
+      }
+    };
+    
+    const partition = async (arr: number[], low: number, high: number): Promise<number> => {
+      const pivot = arr[high];
+      let i = low - 1;
+      
+      for (let j = low; j < high && !activeLoop.stop; j++) {
+        if (arr[j] < pivot) {
+          i++;
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+          playTone(valueToFrequency(arr[i], size), noteDuration, ctx.currentTime);
+          
+          if (visualCallback) {
+            visualCallback([...arr], [i, j]);
+            await delay(30);
+          }
+        }
+      }
+      [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
+      return i + 1;
+    };
+    
+    const introSortUtil = async (arr: number[], low: number, high: number, depth: number) => {
+      const size = high - low + 1;
+      
+      if (size < 16 || activeLoop.stop) {
+        await insertionSort(arr, low, high);
+        return;
+      }
+      
+      if (depth === 0) {
+        await heapSort(arr, low, high);
+        return;
+      }
+      
+      const pivot = await partition(arr, low, high);
+      await introSortUtil(arr, low, pivot - 1, depth - 1);
+      await introSortUtil(arr, pivot + 1, high, depth - 1);
+    };
+    
+    await introSortUtil(array, 0, array.length - 1, maxDepth);
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Smooth Sort - Leonardo heap variant
+export const generateSmoothSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    
+    // Simplified smooth sort (using heap-like behavior with smooth transitions)
+    const leonardo = [1, 1];
+    while (leonardo[leonardo.length - 1] < array.length) {
+      const next = leonardo[leonardo.length - 1] + leonardo[leonardo.length - 2] + 1;
+      leonardo.push(next);
+    }
+    
+    const sift = async (arr: number[], root: number, size: number) => {
+      while (root > 0 && !activeLoop.stop) {
+        const left = root - 1;
+        if (left >= 0 && arr[left] > arr[root]) {
+          [arr[left], arr[root]] = [arr[root], arr[left]];
+          playTone(valueToFrequency(arr[root], size), noteDuration, ctx.currentTime);
+          
+          if (visualCallback) {
+            visualCallback([...arr], [left, root]);
+            await delay(35);
+          }
+          root = left;
+        } else {
+          break;
+        }
+      }
+    };
+    
+    // Build heaps
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      await sift(array, i, array.length);
+    }
+    
+    // Sort by extracting
+    for (let i = array.length - 1; i > 0 && !activeLoop.stop; i--) {
+      [array[0], array[i]] = [array[i], array[0]];
+      playTone(valueToFrequency(array[0], size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...array], [0, i]);
+        await delay(35);
+      }
+      
+      await sift(array, 0, i);
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Strand Sort - Extract sorted sublists and merge
+export const generateStrandSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    
+    const merge = (left: number[], right: number[]): number[] => {
+      const result: number[] = [];
+      let i = 0, j = 0;
+      
+      while (i < left.length && j < right.length) {
+        if (left[i] <= right[j]) {
+          result.push(left[i++]);
+        } else {
+          result.push(right[j++]);
+        }
+      }
+      
+      return result.concat(left.slice(i)).concat(right.slice(j));
+    };
+    
+    let input = [...array];
+    let result: number[] = [];
+    
+    while (input.length > 0 && !activeLoop.stop) {
+      const sublist: number[] = [input[0]];
+      const remaining: number[] = [];
+      
+      for (let i = 1; i < input.length && !activeLoop.stop; i++) {
+        if (input[i] >= sublist[sublist.length - 1]) {
+          sublist.push(input[i]);
+          playTone(valueToFrequency(input[i], size), noteDuration, ctx.currentTime);
+          
+          if (visualCallback) {
+            const display = [...result, ...sublist, ...remaining];
+            visualCallback(display.slice(0, array.length), [result.length + sublist.length - 1]);
+            await delay(40);
+          }
+        } else {
+          remaining.push(input[i]);
+        }
+      }
+      
+      result = merge(result, sublist);
+      input = remaining;
+      
+      if (visualCallback) {
+        visualCallback([...result, ...input].slice(0, array.length), []);
+        await delay(40);
+      }
+    }
+    
+    for (let i = 0; i < array.length; i++) {
+      array[i] = result[i];
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
 export const sortingFunctions: Record<string, (size?: number, visualCallback?: VisualCallback, loop?: boolean) => Promise<void>> = {
   bubble: generateBubbleSort,
   quick: generateQuickSort,
@@ -1245,4 +1608,9 @@ export const sortingFunctions: Record<string, (size?: number, visualCallback?: V
   bead: generateBeadSort,
   slow: generateSlowSort,
   bogobogo: generateBogobogoSort,
+  'binary-insertion': generateBinaryInsertionSort,
+  tree: generateTreeSort,
+  intro: generateIntroSort,
+  smooth: generateSmoothSort,
+  strand: generateStrandSort,
 };
