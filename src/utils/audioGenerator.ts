@@ -37,6 +37,23 @@ const valueToFrequency = (value: number, maxValue: number) => {
   return 200 + (value / maxValue) * 600;
 };
 
+// Play the sorted array as a satisfying ascending scale
+const playSortedArray = async (array: number[], size: number, visualCallback?: VisualCallback) => {
+  const ctx = getAudioContext();
+  const noteDuration = 0.03;
+  
+  for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+    playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+    
+    if (visualCallback) {
+      visualCallback([...array], [i]);
+      await delay(15);
+    }
+  }
+  
+  await delay(300);
+};
+
 export interface SortingAlgorithm {
   id: string;
   name: string;
@@ -102,6 +119,8 @@ export const generateBubbleSort = async (size: number = 60, visualCallback?: Vis
       }
     }
     
+    await playSortedArray(array, size, visualCallback);
+    
     if (!loop || activeLoop.stop) break;
     await delay(500);
   }
@@ -155,6 +174,8 @@ export const generateQuickSort = async (size: number = 60, visualCallback?: Visu
     };
 
     await quickSort(array, 0, array.length - 1);
+    
+    await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
     await delay(500);
@@ -228,6 +249,8 @@ export const generateMergeSort = async (size: number = 60, visualCallback?: Visu
 
     await mergeSort(array, 0, array.length - 1);
     
+    await playSortedArray(array, size, visualCallback);
+    
     if (!loop || activeLoop.stop) break;
     await delay(500);
   }
@@ -262,6 +285,8 @@ export const generateInsertionSort = async (size: number = 60, visualCallback?: 
         await delay(40);
       }
     }
+    
+    await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
     await delay(500);
@@ -299,6 +324,8 @@ export const generateSelectionSort = async (size: number = 60, visualCallback?: 
         }
       }
     }
+    
+    await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
     await delay(500);
@@ -350,6 +377,8 @@ export const generateHeapSort = async (size: number = 60, visualCallback?: Visua
       await heapify(array, i, 0);
     }
     
+    await playSortedArray(array, size, visualCallback);
+    
     if (!loop || activeLoop.stop) break;
     await delay(500);
   }
@@ -382,6 +411,8 @@ export const generateShellSort = async (size: number = 60, visualCallback?: Visu
         array[j] = temp;
       }
     }
+    
+    await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
     await delay(500);
@@ -437,6 +468,8 @@ export const generateCocktailSort = async (size: number = 60, visualCallback?: V
       start++;
     }
     
+    await playSortedArray(array, size, visualCallback);
+    
     if (!loop || activeLoop.stop) break;
     await delay(500);
   }
@@ -475,6 +508,8 @@ export const generateCombSort = async (size: number = 60, visualCallback?: Visua
       }
     }
     
+    await playSortedArray(array, size, visualCallback);
+    
     if (!loop || activeLoop.stop) break;
     await delay(500);
   }
@@ -505,6 +540,8 @@ export const generateGnomeSort = async (size: number = 60, visualCallback?: Visu
         i--;
       }
     }
+    
+    await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
     await delay(500);
@@ -552,6 +589,8 @@ export const generateOddEvenSort = async (size: number = 60, visualCallback?: Vi
         }
       }
     }
+    
+    await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
     await delay(500);
@@ -608,6 +647,8 @@ export const generateRadixSort = async (size: number = 60, visualCallback?: Visu
       await countingSort(array, exp);
     }
     
+    await playSortedArray(array, size, visualCallback);
+    
     if (!loop || activeLoop.stop) break;
     await delay(500);
   }
@@ -644,6 +685,8 @@ export const generateCountingSort = async (size: number = 60, visualCallback?: V
         count[i]--;
       }
     }
+    
+    await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
     await delay(500);
@@ -685,6 +728,8 @@ export const generateBucketSort = async (size: number = 60, visualCallback?: Vis
         index++;
       }
     }
+    
+    await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
     await delay(500);
@@ -775,6 +820,8 @@ export const generateTimSort = async (size: number = 60, visualCallback?: Visual
         }
       }
     }
+    
+    await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
     await delay(500);
