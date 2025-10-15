@@ -79,6 +79,14 @@ export const sortingAlgorithms: SortingAlgorithm[] = [
   { id: 'counting', name: 'Counting Sort', description: 'Integer counting with clear sequences', category: 'Non-comparison', complexity: 'O(n+k)', color: 'from-sky-500 to-indigo-500' },
   { id: 'bucket', name: 'Bucket Sort', description: 'Distribution into buckets with smooth flow', category: 'Distribution', complexity: 'O(n+k)', color: 'from-blue-500 to-violet-500' },
   { id: 'tim', name: 'Tim Sort', description: 'Hybrid merge-insertion with complexity', category: 'Hybrid', complexity: 'O(n log n)', color: 'from-purple-500 to-indigo-500' },
+  { id: 'bogo', name: 'Bogo Sort', description: 'Chaotic random shuffling until sorted', category: 'Chaos', complexity: 'O((n+1)!)', color: 'from-red-500 to-orange-500' },
+  { id: 'bitonic', name: 'Bitonic Sort', description: 'Parallel network with symmetrical patterns', category: 'Parallel', complexity: 'O(log²n)', color: 'from-teal-500 to-cyan-500' },
+  { id: 'cycle', name: 'Cycle Sort', description: 'Minimal writes with deliberate placement', category: 'Optimization', complexity: 'O(n²)', color: 'from-green-500 to-emerald-500' },
+  { id: 'pancake', name: 'Pancake Sort', description: 'Flipping subarrays creates unique rhythms', category: 'Flip', complexity: 'O(n²)', color: 'from-amber-500 to-orange-500' },
+  { id: 'stooge', name: 'Stooge Sort', description: 'Recursive silly pattern with overlaps', category: 'Recursive', complexity: 'O(n^2.7)', color: 'from-pink-500 to-purple-500' },
+  { id: 'bead', name: 'Bead Sort', description: 'Gravity simulation with cascading falls', category: 'Physics', complexity: 'O(n) or O(S)', color: 'from-stone-500 to-zinc-500' },
+  { id: 'slow', name: 'Slow Sort', description: 'Deliberately inefficient multiply-and-surrender', category: 'Silly', complexity: 'Ω(n^(log n / 2))', color: 'from-slate-500 to-gray-500' },
+  { id: 'bogobogo', name: 'Bogobogo Sort', description: 'Extreme chaos - bogo sort recursively', category: 'Chaos', complexity: 'O(∞)', color: 'from-rose-500 to-red-500' },
 ];
 
 // Helper to create delay for visual updates
@@ -828,6 +836,391 @@ export const generateTimSort = async (size: number = 60, visualCallback?: Visual
   }
 };
 
+// Bogo Sort - Completely random chaos
+export const generateBogoSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.02;
+    
+    const isSorted = (arr: number[]) => {
+      for (let i = 0; i < arr.length - 1; i++) {
+        if (arr[i] > arr[i + 1]) return false;
+      }
+      return true;
+    };
+    
+    const shuffle = async (arr: number[]) => {
+      for (let i = arr.length - 1; i > 0 && !activeLoop.stop; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+        playTone(valueToFrequency(arr[i], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...arr], [i, j]);
+          await delay(20);
+        }
+      }
+    };
+    
+    while (!isSorted(array) && !activeLoop.stop) {
+      await shuffle(array);
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Bitonic Sort - Parallel sorting network with beautiful symmetry
+export const generateBitonicSort = async (size: number = 64, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const paddedSize = Math.pow(2, Math.ceil(Math.log2(size)));
+    const array = Array.from({ length: paddedSize }, (_, i) => 
+      i < size ? Math.floor(Math.random() * size) + 1 : 0
+    );
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    
+    const compAndSwap = async (arr: number[], i: number, j: number, dir: boolean) => {
+      if ((arr[i] > arr[j] && dir) || (arr[i] < arr[j] && !dir)) {
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+        playTone(valueToFrequency(arr[i], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...arr].slice(0, size), [i, j]);
+          await delay(25);
+        }
+      }
+    };
+    
+    const bitonicMerge = async (arr: number[], low: number, cnt: number, dir: boolean) => {
+      if (cnt > 1 && !activeLoop.stop) {
+        const k = Math.floor(cnt / 2);
+        for (let i = low; i < low + k && !activeLoop.stop; i++) {
+          await compAndSwap(arr, i, i + k, dir);
+        }
+        await bitonicMerge(arr, low, k, dir);
+        await bitonicMerge(arr, low + k, k, dir);
+      }
+    };
+    
+    const bitonicSort = async (arr: number[], low: number, cnt: number, dir: boolean) => {
+      if (cnt > 1 && !activeLoop.stop) {
+        const k = Math.floor(cnt / 2);
+        await bitonicSort(arr, low, k, true);
+        await bitonicSort(arr, low + k, k, false);
+        await bitonicMerge(arr, low, cnt, dir);
+      }
+    };
+    
+    await bitonicSort(array, 0, paddedSize, true);
+    
+    await playSortedArray(array.slice(0, size), size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Cycle Sort - Minimal writes with intentional placement
+export const generateCycleSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.05;
+    
+    for (let cycleStart = 0; cycleStart < array.length - 1 && !activeLoop.stop; cycleStart++) {
+      let item = array[cycleStart];
+      let pos = cycleStart;
+      
+      for (let i = cycleStart + 1; i < array.length; i++) {
+        if (array[i] < item) pos++;
+      }
+      
+      if (pos === cycleStart) continue;
+      
+      while (item === array[pos]) pos++;
+      
+      [item, array[pos]] = [array[pos], item];
+      playTone(valueToFrequency(array[pos], size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...array], [cycleStart, pos]);
+        await delay(60);
+      }
+      
+      while (pos !== cycleStart && !activeLoop.stop) {
+        pos = cycleStart;
+        for (let i = cycleStart + 1; i < array.length; i++) {
+          if (array[i] < item) pos++;
+        }
+        
+        while (item === array[pos]) pos++;
+        
+        [item, array[pos]] = [array[pos], item];
+        playTone(valueToFrequency(array[pos], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...array], [pos]);
+          await delay(60);
+        }
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Pancake Sort - Flipping creates unique audio patterns
+export const generatePancakeSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    
+    const flip = async (arr: number[], k: number) => {
+      let left = 0;
+      while (left < k && !activeLoop.stop) {
+        [arr[left], arr[k]] = [arr[k], arr[left]];
+        playTone(valueToFrequency(arr[left], size), noteDuration, ctx.currentTime);
+        playTone(valueToFrequency(arr[k], size), noteDuration, ctx.currentTime + noteDuration / 2);
+        
+        if (visualCallback) {
+          visualCallback([...arr], [left, k]);
+          await delay(25);
+        }
+        left++;
+        k--;
+      }
+    };
+    
+    const findMax = (arr: number[], n: number) => {
+      let maxIdx = 0;
+      for (let i = 0; i < n; i++) {
+        if (arr[i] > arr[maxIdx]) maxIdx = i;
+      }
+      return maxIdx;
+    };
+    
+    for (let currSize = array.length; currSize > 1 && !activeLoop.stop; currSize--) {
+      const maxIdx = findMax(array, currSize);
+      
+      if (maxIdx !== currSize - 1) {
+        if (maxIdx !== 0) {
+          await flip(array, maxIdx);
+        }
+        await flip(array, currSize - 1);
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Stooge Sort - Silly recursive pattern
+export const generateStoogeSort = async (size: number = 40, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    
+    const stoogeSort = async (arr: number[], l: number, h: number) => {
+      if (l >= h || activeLoop.stop) return;
+      
+      if (arr[l] > arr[h]) {
+        [arr[l], arr[h]] = [arr[h], arr[l]];
+        playTone(valueToFrequency(arr[l], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...arr], [l, h]);
+          await delay(35);
+        }
+      }
+      
+      if (h - l + 1 > 2) {
+        const t = Math.floor((h - l + 1) / 3);
+        await stoogeSort(arr, l, h - t);
+        await stoogeSort(arr, l + t, h);
+        await stoogeSort(arr, l, h - t);
+      }
+    };
+    
+    await stoogeSort(array, 0, array.length - 1);
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Bead Sort - Gravity simulation (positive integers only)
+export const generateBeadSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.02;
+    
+    const max = Math.max(...array);
+    const beads: boolean[][] = Array.from({ length: array.length }, () => 
+      Array(max).fill(false)
+    );
+    
+    // Setup beads
+    for (let i = 0; i < array.length; i++) {
+      for (let j = 0; j < array[i]; j++) {
+        beads[i][j] = true;
+      }
+    }
+    
+    // Let beads fall (gravity)
+    for (let j = 0; j < max && !activeLoop.stop; j++) {
+      let sum = 0;
+      for (let i = 0; i < array.length; i++) {
+        sum += beads[i][j] ? 1 : 0;
+        beads[i][j] = false;
+      }
+      
+      for (let i = array.length - sum; i < array.length && !activeLoop.stop; i++) {
+        beads[i][j] = true;
+        
+        // Count current value for this row
+        let currentValue = 0;
+        for (let k = 0; k < max; k++) {
+          if (beads[i][k]) currentValue++;
+        }
+        
+        array[i] = currentValue;
+        playTone(valueToFrequency(currentValue || 1, size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...array], [i]);
+          await delay(15);
+        }
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Slow Sort - Deliberately inefficient multiply-and-surrender
+export const generateSlowSort = async (size: number = 30, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.05;
+    
+    const slowSort = async (arr: number[], i: number, j: number) => {
+      if (i >= j || activeLoop.stop) return;
+      
+      const m = Math.floor((i + j) / 2);
+      await slowSort(arr, i, m);
+      await slowSort(arr, m + 1, j);
+      
+      if (arr[m] > arr[j]) {
+        [arr[m], arr[j]] = [arr[j], arr[m]];
+        playTone(valueToFrequency(arr[j], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...arr], [m, j]);
+          await delay(50);
+        }
+      }
+      
+      await slowSort(arr, i, j - 1);
+    };
+    
+    await slowSort(array, 0, array.length - 1);
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Bogobogo Sort - Extreme chaos (limited iterations for sanity)
+export const generateBogobogoSort = async (size: number = 20, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.02;
+    let attempts = 0;
+    const maxAttempts = 1000; // Safety limit
+    
+    const isSorted = (arr: number[], n: number) => {
+      for (let i = 0; i < n - 1; i++) {
+        if (arr[i] > arr[i + 1]) return false;
+      }
+      return true;
+    };
+    
+    const shuffle = async (arr: number[], n: number) => {
+      for (let i = n - 1; i > 0 && !activeLoop.stop; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+        playTone(valueToFrequency(arr[i], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...arr], [i, j]);
+          await delay(15);
+        }
+      }
+    };
+    
+    const bogobogoSort = async (arr: number[], n: number): Promise<void> => {
+      if (n <= 1 || activeLoop.stop || attempts >= maxAttempts) return;
+      
+      while (!isSorted(arr, n) && !activeLoop.stop && attempts < maxAttempts) {
+        await bogobogoSort(arr, n - 1);
+        await shuffle(arr, n);
+        attempts++;
+      }
+    };
+    
+    await bogobogoSort(array, array.length);
+    
+    // Force sort if it didn't finish (for demo purposes)
+    if (attempts >= maxAttempts) {
+      array.sort((a, b) => a - b);
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
 export const sortingFunctions: Record<string, (size?: number, visualCallback?: VisualCallback, loop?: boolean) => Promise<void>> = {
   bubble: generateBubbleSort,
   quick: generateQuickSort,
@@ -844,4 +1237,12 @@ export const sortingFunctions: Record<string, (size?: number, visualCallback?: V
   counting: generateCountingSort,
   bucket: generateBucketSort,
   tim: generateTimSort,
+  bogo: generateBogoSort,
+  bitonic: generateBitonicSort,
+  cycle: generateCycleSort,
+  pancake: generatePancakeSort,
+  stooge: generateStoogeSort,
+  bead: generateBeadSort,
+  slow: generateSlowSort,
+  bogobogo: generateBogobogoSort,
 };
