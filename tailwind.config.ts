@@ -52,13 +52,16 @@ export default {
         'gradient-primary': 'var(--gradient-primary)',
         'gradient-hero': 'var(--gradient-hero)',
         'gradient-card': 'var(--gradient-card)',
+        'gradient-visualizer': 'var(--gradient-visualizer)',
       },
       boxShadow: {
         'glow-primary': 'var(--glow-primary)',
         'glow-secondary': 'var(--glow-secondary)',
+        'glow-subtle': 'var(--glow-subtle)',
       },
       transitionProperty: {
         'smooth': 'var(--transition-smooth)',
+        'fast': 'var(--transition-fast)',
       },
       borderRadius: {
         lg: "var(--radius)",

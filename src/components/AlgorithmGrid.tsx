@@ -62,67 +62,67 @@ export const AlgorithmGrid = () => {
   const maxValue = visualArrays[playingId || ''] ? Math.max(...visualArrays[playingId || '']) : 60;
 
   return (
-    <section className="h-screen flex flex-col px-4 py-2 overflow-hidden">
-      <div className="container mx-auto flex-1 flex flex-col min-h-0">
+    <section className="h-screen flex flex-col px-3 py-2 overflow-hidden">
+      <div className="container mx-auto flex-1 flex flex-col min-h-0 max-w-7xl">
         {/* Compact Header */}
         <div className="text-center mb-2">
-          <h1 className="text-lg font-bold bg-gradient-primary bg-clip-text text-transparent">
+          <h1 className="text-base font-bold bg-gradient-primary bg-clip-text text-transparent tracking-tight">
             Sort Your Mind
           </h1>
         </div>
 
-        {/* Central Visualizer */}
-        <div className="flex flex-col bg-gradient-card backdrop-blur-md border border-border/50 rounded-lg p-3 mb-3 h-[40vh]">
-          <div className="mb-2">
-            <h2 className="text-sm font-semibold text-foreground mb-0.5">
-              {currentAlgorithm ? currentAlgorithm.name : 'Visualizer'}
-            </h2>
-            {currentAlgorithm && (
-              <p className="text-xs text-muted-foreground line-clamp-1">
-                {currentAlgorithm.description}
-              </p>
+        {/* Modern Central Visualizer */}
+        <div className="flex flex-col bg-gradient-visualizer backdrop-blur-xl border border-border/30 rounded-xl p-3 mb-2 h-[35vh] shadow-glow-subtle">
+          <div className="flex items-center justify-between mb-2">
+            <div className="flex-1 min-w-0">
+              <h2 className="text-xs font-bold text-foreground/90 mb-0.5 tracking-wide uppercase">
+                {currentAlgorithm ? currentAlgorithm.name : 'Visualizer'}
+              </h2>
+              {currentAlgorithm && (
+                <p className="text-[10px] text-muted-foreground line-clamp-1">
+                  {currentAlgorithm.description}
+                </p>
+              )}
+            </div>
+            {playingId && (
+              <button
+                onClick={handleStop}
+                className="ml-2 bg-destructive/90 hover:bg-destructive text-destructive-foreground py-1 px-2.5 rounded-lg transition-fast flex items-center gap-1.5 text-[10px] font-semibold shadow-lg hover:shadow-xl"
+              >
+                <Pause className="w-3 h-3" />
+                Stop
+              </button>
             )}
           </div>
 
-          <div className="flex-1 flex items-end gap-0.5 bg-background/50 rounded-md p-2 min-h-0">
+          <div className="flex-1 flex items-end gap-[1px] bg-background/30 rounded-lg p-2.5 min-h-0 backdrop-blur-sm border border-border/20">
             {visualArrays[playingId || ''] && visualArrays[playingId || ''].length > 0 ? (
               visualArrays[playingId || ''].map((value, i) => {
                 const isHighlighted = highlightIndices[playingId || '']?.includes(i);
                 return (
                   <div
                     key={i}
-                    className={`flex-1 rounded-sm transition-all duration-150 ${
+                    className={`flex-1 rounded-t-sm transition-all duration-100 ${
                       isHighlighted && currentAlgorithm
-                        ? `bg-gradient-to-t ${currentAlgorithm.color}` 
-                        : 'bg-gradient-to-t from-muted to-muted-foreground/30'
+                        ? `bg-gradient-to-t ${currentAlgorithm.color} shadow-lg` 
+                        : 'bg-gradient-to-t from-muted/80 to-muted-foreground/40'
                     }`}
                     style={{
                       height: `${(value / maxValue) * 100}%`,
-                      minWidth: '2px',
+                      minWidth: '1.5px',
+                      filter: isHighlighted ? 'brightness(1.2)' : 'brightness(0.9)',
                     }}
                   />
                 );
               })
             ) : (
               <div className="flex-1 flex items-center justify-center">
-                <p className="text-muted-foreground text-xs">
+                <p className="text-muted-foreground/60 text-[11px] font-medium">
                   Select an algorithm to begin
                 </p>
               </div>
             )}
           </div>
-
-          {playingId && (
-            <div className="mt-2">
-              <button
-                onClick={handleStop}
-                className="w-full bg-destructive hover:bg-destructive/90 text-destructive-foreground py-1.5 px-3 rounded-md transition-colors flex items-center justify-center gap-2 text-xs font-medium"
-              >
-                <Pause className="w-3 h-3" />
-                Stop
-              </button>
-            </div>
-          )}
         </div>
 
         {/* Algorithm Options Below */}
@@ -130,20 +130,20 @@ export const AlgorithmGrid = () => {
           {/* Search */}
           <div className="mb-2">
             <div className="relative">
-              <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-muted-foreground" />
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-muted-foreground/60" />
               <Input
                 type="text"
                 placeholder="Search algorithms..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-8 h-8 text-xs bg-card/50 backdrop-blur-sm border-border/50 focus:border-primary/50 transition-colors"
+                className="pl-7 h-7 text-[11px] bg-card/60 backdrop-blur-sm border-border/40 focus:border-primary/60 transition-fast rounded-lg"
               />
             </div>
           </div>
 
-          {/* Optimized Scrollable Grid */}
+          {/* Compact Scrollable Grid */}
           <div className="flex-1 overflow-y-auto pr-1 min-h-0 scrollbar-thin">
-            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 xl:grid-cols-7 gap-2">
+            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-9 gap-1.5">
               {filteredAlgorithms.map((algorithm) => (
                 <AlgorithmCard
                   key={algorithm.id}
@@ -155,8 +155,8 @@ export const AlgorithmGrid = () => {
             </div>
 
             {filteredAlgorithms.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-xs text-muted-foreground">No algorithms found</p>
+              <div className="text-center py-6">
+                <p className="text-[11px] text-muted-foreground/60">No algorithms found</p>
               </div>
             )}
           </div>
