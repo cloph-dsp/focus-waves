@@ -92,6 +92,28 @@ export const sortingAlgorithms: SortingAlgorithm[] = [
   { id: 'intro', name: 'Intro Sort', description: 'Hybrid quick-heap-insertion (used in std::sort)', category: 'Hybrid', complexity: 'O(n log n)', color: 'from-violet-500 to-purple-500' },
   { id: 'smooth', name: 'Smooth Sort', description: 'Leonardo heap with smooth transitions', category: 'Efficient', complexity: 'O(n log n)', color: 'from-indigo-500 to-blue-500' },
   { id: 'strand', name: 'Strand Sort', description: 'Extract sorted sublists and merge', category: 'Merge-based', complexity: 'O(n²)', color: 'from-cyan-500 to-sky-500' },
+  { id: 'pigeonhole', name: 'Pigeonhole Sort', description: 'Pigeonhole distribution with integer sorting', category: 'Distribution', complexity: 'O(n+k)', color: 'from-fuchsia-500 to-pink-500' },
+  { id: 'flash', name: 'Flash Sort', description: 'Distribution sort with classification', category: 'Distribution', complexity: 'O(n)', color: 'from-yellow-500 to-red-500' },
+  { id: 'library', name: 'Library Sort', description: 'Insertion with gaps like library shelves', category: 'Insertion-based', complexity: 'O(n log n)', color: 'from-amber-500 to-orange-500' },
+  { id: 'block', name: 'Block Sort', description: 'Block merge with O(1) memory', category: 'Merge-based', complexity: 'O(n log n)', color: 'from-slate-500 to-stone-500' },
+  { id: 'patience', name: 'Patience Sort', description: 'Card game inspired pile sorting', category: 'Pile-based', complexity: 'O(n log n)', color: 'from-teal-500 to-emerald-500' },
+  { id: 'tournament', name: 'Tournament Sort', description: 'Tree tournament bracket elimination', category: 'Tree-based', complexity: 'O(n log n)', color: 'from-indigo-500 to-violet-500' },
+  { id: 'tag', name: 'Tag Sort', description: 'Sort indices then rearrange data', category: 'Indirect', complexity: 'O(n log n)', color: 'from-pink-500 to-rose-500' },
+  { id: 'american-flag', name: 'American Flag Sort', description: 'In-place string bucket distribution', category: 'String', complexity: 'O(nk)', color: 'from-red-500 to-blue-500' },
+  { id: 'burst', name: 'Burst Sort', description: 'Hybrid burst trie string sorting', category: 'String', complexity: 'O(n)', color: 'from-orange-500 to-yellow-500' },
+  { id: 'sleep', name: 'Sleep Sort', description: 'Thread sleep based on value (silly!)', category: 'Silly', complexity: 'O(max(n))', color: 'from-purple-500 to-blue-500' },
+  { id: 'stalin', name: 'Stalin Sort', description: 'Remove elements until sorted (cheating!)', category: 'Silly', complexity: 'O(n)', color: 'from-red-500 to-gray-500' },
+  { id: 'miracle', name: 'Miracle Sort', description: 'Wait for quantum miracle to sort', category: 'Chaos', complexity: 'O(∞) or O(1)', color: 'from-white to-yellow-500' },
+  { id: 'intelligent-design', name: 'Intelligent Design', description: 'Assume array is already sorted', category: 'Silly', complexity: 'O(1)', color: 'from-blue-500 to-white' },
+  { id: 'quantum-bogo', name: 'Quantum Bogosort', description: 'Quantum parallel universe sorting', category: 'Chaos', complexity: 'O(n) or O(∞)', color: 'from-purple-500 to-pink-500' },
+  { id: 'postman', name: 'Postman Sort', description: 'Multi-pass distribution like mail routes', category: 'Distribution', complexity: 'O(nk)', color: 'from-blue-500 to-green-500' },
+  { id: 'merge-insertion', name: 'Merge-Insertion', description: 'Ford-Johnson optimal comparisons', category: 'Hybrid', complexity: 'O(n log n)', color: 'from-emerald-500 to-cyan-500' },
+  { id: 'cartesian-tree', name: 'Cartesian Tree Sort', description: 'Build cartesian tree and traverse', category: 'Tree-based', complexity: 'O(n log n)', color: 'from-lime-500 to-teal-500' },
+  { id: 'double-selection', name: 'Double Selection', description: 'Select min and max simultaneously', category: 'Simple', complexity: 'O(n²)', color: 'from-red-500 to-yellow-500' },
+  { id: 'gravity', name: 'Gravity Sort', description: 'Abacus-like gravity simulation', category: 'Physics', complexity: 'O(n²)', color: 'from-gray-500 to-blue-500' },
+  { id: 'network', name: 'Network Sort', description: 'Fixed sorting network comparisons', category: 'Parallel', complexity: 'O(log²n)', color: 'from-cyan-500 to-indigo-500' },
+  { id: 'splay', name: 'Splaysort', description: 'Splay tree based adaptive sort', category: 'Tree-based', complexity: 'O(n log n)', color: 'from-violet-500 to-fuchsia-500' },
+  { id: 'franceschini', name: 'Franceschini Sort', description: 'Merge sort with O(1) space', category: 'Merge-based', complexity: 'O(n log n)', color: 'from-orange-500 to-red-500' },
 ];
 
 // Helper to create delay for visual updates
@@ -1584,6 +1606,989 @@ export const generateStrandSort = async (size: number = 60, visualCallback?: Vis
   }
 };
 
+// Pigeonhole Sort - Distribution into pigeonholes
+export const generatePigeonholeSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    
+    const min = Math.min(...array);
+    const max = Math.max(...array);
+    const range = max - min + 1;
+    const holes = Array.from({ length: range }, () => [] as number[]);
+    
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      holes[array[i] - min].push(array[i]);
+      playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...array], [i]);
+        await delay(30);
+      }
+    }
+    
+    let index = 0;
+    for (let i = 0; i < range && !activeLoop.stop; i++) {
+      for (const value of holes[i]) {
+        array[index] = value;
+        playTone(valueToFrequency(value, size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...array], [index]);
+          await delay(30);
+        }
+        index++;
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Flash Sort - Classification-based distribution
+export const generateFlashSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    const m = Math.floor(size * 0.43);
+    
+    const min = Math.min(...array);
+    const max = Math.max(...array);
+    const c1 = (m - 1) / (max - min);
+    const L = new Array(m).fill(0);
+    
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      const k = Math.floor(c1 * (array[i] - min));
+      L[k]++;
+      playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...array], [i]);
+        await delay(25);
+      }
+    }
+    
+    for (let i = 1; i < m; i++) L[i] += L[i - 1];
+    
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      const k = Math.floor(c1 * (array[i] - min));
+      while (i >= L[k] && !activeLoop.stop) {
+        const j = L[k] - 1;
+        [array[i], array[j]] = [array[j], array[i]];
+        playTone(valueToFrequency(array[j], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...array], [i, j]);
+          await delay(25);
+        }
+        L[k]--;
+      }
+    }
+    
+    await generateInsertionSort(size, visualCallback, false);
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Library Sort - Insertion with gaps
+export const generateLibrarySort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    const epsilon = 1;
+    const lib = new Array(array.length * (1 + epsilon)).fill(null);
+    
+    lib[0] = array[0];
+    let libSize = 1;
+    
+    for (let i = 1; i < array.length && !activeLoop.stop; i++) {
+      let pos = 0;
+      for (let j = 0; j < libSize; j++) {
+        if (lib[j] !== null && lib[j] < array[i]) pos = j + 1;
+      }
+      
+      for (let j = libSize; j > pos && !activeLoop.stop; j--) {
+        lib[j] = lib[j - 1];
+      }
+      lib[pos] = array[i];
+      playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        const display = lib.filter(x => x !== null).slice(0, array.length);
+        visualCallback([...display], [pos]);
+        await delay(35);
+      }
+      libSize++;
+    }
+    
+    const sorted = lib.filter(x => x !== null);
+    for (let i = 0; i < array.length; i++) array[i] = sorted[i];
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Block Sort - In-place stable merge
+export const generateBlockSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    
+    const blockSize = Math.floor(Math.sqrt(array.length));
+    
+    for (let i = 0; i < array.length && !activeLoop.stop; i += blockSize) {
+      const end = Math.min(i + blockSize, array.length);
+      for (let j = i + 1; j < end && !activeLoop.stop; j++) {
+        const key = array[j];
+        let k = j - 1;
+        while (k >= i && array[k] > key && !activeLoop.stop) {
+          array[k + 1] = array[k];
+          playTone(valueToFrequency(array[k + 1], size), noteDuration, ctx.currentTime);
+          
+          if (visualCallback) {
+            visualCallback([...array], [k, k + 1]);
+            await delay(30);
+          }
+          k--;
+        }
+        array[k + 1] = key;
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Patience Sort - Card game piles
+export const generatePatienceSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    const piles: number[][] = [];
+    
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      let placed = false;
+      for (let j = 0; j < piles.length && !activeLoop.stop; j++) {
+        if (piles[j][piles[j].length - 1] >= array[i]) {
+          piles[j].push(array[i]);
+          playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+          placed = true;
+          
+          if (visualCallback) {
+            visualCallback([...array], [i]);
+            await delay(30);
+          }
+          break;
+        }
+      }
+      if (!placed) {
+        piles.push([array[i]]);
+        playTone(valueToFrequency(array[i], size), noteDuration * 1.2, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...array], [i]);
+          await delay(30);
+        }
+      }
+    }
+    
+    let index = 0;
+    while (piles.some(p => p.length > 0) && !activeLoop.stop) {
+      let minPile = -1;
+      let minValue = Infinity;
+      for (let i = 0; i < piles.length; i++) {
+        if (piles[i].length > 0 && piles[i][piles[i].length - 1] < minValue) {
+          minValue = piles[i][piles[i].length - 1];
+          minPile = i;
+        }
+      }
+      array[index++] = piles[minPile].pop()!;
+      playTone(valueToFrequency(array[index - 1], size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...array], [index - 1]);
+        await delay(30);
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Tournament Sort - Binary tree tournament
+export const generateTournamentSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    const tree = [...array];
+    
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      let minIdx = 0;
+      for (let j = 1; j < tree.length; j++) {
+        if (tree[j] < tree[minIdx]) minIdx = j;
+        playTone(valueToFrequency(tree[j], size), noteDuration / 2, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...tree], [j, minIdx]);
+          await delay(25);
+        }
+      }
+      array[i] = tree[minIdx];
+      tree[minIdx] = Infinity;
+      playTone(valueToFrequency(array[i], size), noteDuration * 1.5, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...array], [i]);
+        await delay(40);
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Tag Sort - Sort indices then rearrange
+export const generateTagSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    const tags = array.map((val, idx) => ({ val, idx }));
+    
+    tags.sort((a, b) => {
+      playTone(valueToFrequency(a.val, size), noteDuration / 3, ctx.currentTime);
+      return a.val - b.val;
+    });
+    
+    for (let i = 0; i < tags.length && !activeLoop.stop; i++) {
+      array[i] = tags[i].val;
+      playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...array], [i]);
+        await delay(25);
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// American Flag Sort - In-place string/integer bucket sort
+export const generateAmericanFlagSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    const maxDigits = Math.max(...array).toString().length;
+    
+    for (let digit = maxDigits - 1; digit >= 0 && !activeLoop.stop; digit--) {
+      const buckets: number[][] = Array.from({ length: 10 }, () => []);
+      
+      for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+        const d = Math.floor(array[i] / Math.pow(10, digit)) % 10;
+        buckets[d].push(array[i]);
+        playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...array], [i]);
+          await delay(25);
+        }
+      }
+      
+      let index = 0;
+      for (const bucket of buckets) {
+        for (const val of bucket) {
+          array[index++] = val;
+        }
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Burst Sort - Trie-based string sort
+export const generateBurstSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    
+    const buckets: Map<number, number[]> = new Map();
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      const key = Math.floor(array[i] / 10);
+      if (!buckets.has(key)) buckets.set(key, []);
+      buckets.get(key)!.push(array[i]);
+      playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...array], [i]);
+        await delay(25);
+      }
+    }
+    
+    let index = 0;
+    for (const [_, bucket] of Array.from(buckets.entries()).sort((a, b) => a[0] - b[0])) {
+      bucket.sort((a, b) => a - b);
+      for (const val of bucket) {
+        array[index++] = val;
+        playTone(valueToFrequency(val, size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...array], [index - 1]);
+          await delay(25);
+        }
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Sleep Sort - Silly thread-based sort
+export const generateSleepSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    const result: number[] = [];
+    const promises: Promise<void>[] = [];
+    
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      const value = array[i];
+      promises.push(
+        new Promise<void>(resolve => {
+          setTimeout(() => {
+            result.push(value);
+            playTone(valueToFrequency(value, size), noteDuration, ctx.currentTime);
+            resolve();
+          }, value * 5);
+        })
+      );
+    }
+    
+    await Promise.all(promises);
+    
+    for (let i = 0; i < result.length && !activeLoop.stop; i++) {
+      array[i] = result[i];
+      if (visualCallback) {
+        visualCallback([...array], [i]);
+        await delay(20);
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Stalin Sort - Remove non-ascending elements (cheating!)
+export const generateStalinSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    const result = [array[0]];
+    
+    playTone(valueToFrequency(array[0], size), noteDuration, ctx.currentTime);
+    
+    for (let i = 1; i < array.length && !activeLoop.stop; i++) {
+      if (array[i] >= result[result.length - 1]) {
+        result.push(array[i]);
+        playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...result], [result.length - 1]);
+          await delay(40);
+        }
+      } else {
+        playTone(valueToFrequency(array[i], size) * 0.5, noteDuration * 0.5, ctx.currentTime);
+        
+        if (visualCallback) {
+          await delay(30);
+        }
+      }
+    }
+    
+    for (let i = 0; i < result.length; i++) array[i] = result[i];
+    
+    await playSortedArray(result, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Miracle Sort - Wait for cosmic rays
+export const generateMiracleSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.1;
+    
+    const isSorted = () => {
+      for (let i = 0; i < array.length - 1; i++) {
+        if (array[i] > array[i + 1]) return false;
+      }
+      return true;
+    };
+    
+    let checks = 0;
+    while (!isSorted() && checks < 100 && !activeLoop.stop) {
+      for (let i = 0; i < array.length; i++) {
+        playTone(valueToFrequency(array[i], size), noteDuration / 4, ctx.currentTime);
+      }
+      
+      if (visualCallback) {
+        visualCallback([...array], []);
+        await delay(100);
+      }
+      checks++;
+    }
+    
+    if (!isSorted()) array.sort((a, b) => a - b);
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Intelligent Design Sort - Assume it's sorted
+export const generateIntelligentDesignSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.02;
+    
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...array], [i]);
+        await delay(15);
+      }
+    }
+    
+    array.sort((a, b) => a - b);
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Quantum Bogosort - Destroy universe if not sorted
+export const generateQuantumBogoSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    
+    const isSorted = () => {
+      for (let i = 0; i < array.length - 1; i++) {
+        if (array[i] > array[i + 1]) return false;
+      }
+      return true;
+    };
+    
+    let attempts = 0;
+    while (!isSorted() && attempts < 50 && !activeLoop.stop) {
+      for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+        playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+      }
+      
+      if (visualCallback) {
+        visualCallback([...array], []);
+        await delay(50);
+      }
+      attempts++;
+    }
+    
+    if (!isSorted()) array.sort((a, b) => a - b);
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Postman Sort - Multi-pass distribution
+export const generatePostmanSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    const buckets = 10;
+    
+    for (let pass = 0; pass < 2 && !activeLoop.stop; pass++) {
+      const bins: number[][] = Array.from({ length: buckets }, () => []);
+      
+      for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+        const bin = Math.floor((array[i] / size) * (buckets - 1));
+        bins[bin].push(array[i]);
+        playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...array], [i]);
+          await delay(25);
+        }
+      }
+      
+      let index = 0;
+      for (const bin of bins) {
+        bin.sort((a, b) => a - b);
+        for (const val of bin) {
+          array[index++] = val;
+        }
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Merge-Insertion Sort (Ford-Johnson)
+export const generateMergeInsertionSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    
+    if (array.length <= 1) {
+      await playSortedArray(array, size, visualCallback);
+      if (!loop || activeLoop.stop) break;
+      await delay(500);
+      continue;
+    }
+    
+    const pairs: [number, number][] = [];
+    for (let i = 0; i < array.length - 1 && !activeLoop.stop; i += 2) {
+      if (array[i] > array[i + 1]) {
+        pairs.push([array[i + 1], array[i]]);
+      } else {
+        pairs.push([array[i], array[i + 1]]);
+      }
+      playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...array], [i, i + 1]);
+        await delay(35);
+      }
+    }
+    
+    const sorted = pairs.map(p => p[0]).sort((a, b) => a - b);
+    for (const [_, larger] of pairs) {
+      let pos = sorted.findIndex(x => x > larger);
+      if (pos === -1) pos = sorted.length;
+      sorted.splice(pos, 0, larger);
+      playTone(valueToFrequency(larger, size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...sorted], [pos]);
+        await delay(35);
+      }
+    }
+    
+    for (let i = 0; i < sorted.length; i++) array[i] = sorted[i];
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Cartesian Tree Sort
+export const generateCartesianTreeSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    
+    interface Node {
+      value: number;
+      left?: Node;
+      right?: Node;
+    }
+    
+    const buildTree = (arr: number[]): Node | undefined => {
+      if (arr.length === 0) return undefined;
+      const minIdx = arr.indexOf(Math.min(...arr));
+      return {
+        value: arr[minIdx],
+        left: buildTree(arr.slice(0, minIdx)),
+        right: buildTree(arr.slice(minIdx + 1))
+      };
+    };
+    
+    const inorder = async (node: Node | undefined, result: number[]) => {
+      if (!node || activeLoop.stop) return;
+      await inorder(node.left, result);
+      result.push(node.value);
+      playTone(valueToFrequency(node.value, size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...result], [result.length - 1]);
+        await delay(35);
+      }
+      await inorder(node.right, result);
+    };
+    
+    const tree = buildTree(array);
+    const result: number[] = [];
+    await inorder(tree, result);
+    
+    for (let i = 0; i < result.length; i++) array[i] = result[i];
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Double Selection Sort - Select min and max simultaneously
+export const generateDoubleSelectionSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.05;
+    
+    for (let i = 0; i < array.length / 2 && !activeLoop.stop; i++) {
+      let minIdx = i, maxIdx = i;
+      
+      for (let j = i; j < array.length - i && !activeLoop.stop; j++) {
+        if (array[j] < array[minIdx]) minIdx = j;
+        if (array[j] > array[maxIdx]) maxIdx = j;
+        playTone(valueToFrequency(array[j], size), noteDuration / 3, ctx.currentTime);
+        
+        if (visualCallback) {
+          visualCallback([...array], [j, minIdx, maxIdx]);
+          await delay(30);
+        }
+      }
+      
+      if (minIdx !== i) {
+        [array[i], array[minIdx]] = [array[minIdx], array[i]];
+        if (maxIdx === i) maxIdx = minIdx;
+      }
+      
+      const maxPos = array.length - 1 - i;
+      if (maxIdx !== maxPos) {
+        [array[maxPos], array[maxIdx]] = [array[maxIdx], array[maxPos]];
+      }
+      
+      playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+      playTone(valueToFrequency(array[maxPos], size), noteDuration, ctx.currentTime + noteDuration / 2);
+      
+      if (visualCallback) {
+        visualCallback([...array], [i, maxPos]);
+        await delay(50);
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Gravity Sort - Abacus simulation
+export const generateGravitySort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.03;
+    const max = Math.max(...array);
+    const abacus: number[][] = Array.from({ length: array.length }, () => []);
+    
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      for (let j = 0; j < array[i]; j++) {
+        abacus[i].push(1);
+      }
+      playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...array], [i]);
+        await delay(25);
+      }
+    }
+    
+    for (let col = 0; col < max && !activeLoop.stop; col++) {
+      let sum = 0;
+      for (let row = 0; row < array.length; row++) {
+        if (col < abacus[row].length) sum++;
+      }
+      for (let row = array.length - 1, count = sum; count > 0; row--, count--) {
+        while (abacus[row].length <= col) abacus[row].push(0);
+        abacus[row][col] = 1;
+      }
+    }
+    
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      array[i] = abacus[i].filter(x => x === 1).length;
+      playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...array], [i]);
+        await delay(25);
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Network Sort - Fixed comparator network
+export const generateNetworkSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    
+    const compare = async (i: number, j: number) => {
+      if (i < array.length && j < array.length && array[i] > array[j]) {
+        [array[i], array[j]] = [array[j], array[i]];
+        playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
+        playTone(valueToFrequency(array[j], size), noteDuration, ctx.currentTime + noteDuration / 2);
+        
+        if (visualCallback) {
+          visualCallback([...array], [i, j]);
+          await delay(35);
+        }
+      }
+    };
+    
+    const n = array.length;
+    for (let k = 2; k <= n && !activeLoop.stop; k *= 2) {
+      for (let j = k / 2; j > 0 && !activeLoop.stop; j /= 2) {
+        for (let i = 0; i < n && !activeLoop.stop; i++) {
+          const l = i ^ j;
+          if (l > i) {
+            if ((i & k) === 0) {
+              await compare(i, l);
+            } else {
+              await compare(l, i);
+            }
+          }
+        }
+      }
+    }
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Splaysort - Splay tree based
+export const generateSplaysort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    
+    interface Node {
+      value: number;
+      left?: Node;
+      right?: Node;
+    }
+    
+    const insert = (root: Node | undefined, value: number): Node => {
+      if (!root) return { value };
+      if (value < root.value) {
+        root.left = insert(root.left, value);
+      } else {
+        root.right = insert(root.right, value);
+      }
+      return root;
+    };
+    
+    const inorder = async (node: Node | undefined, result: number[]) => {
+      if (!node || activeLoop.stop) return;
+      await inorder(node.left, result);
+      result.push(node.value);
+      playTone(valueToFrequency(node.value, size), noteDuration, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...result], [result.length - 1]);
+        await delay(35);
+      }
+      await inorder(node.right, result);
+    };
+    
+    let root: Node | undefined;
+    for (let i = 0; i < array.length && !activeLoop.stop; i++) {
+      root = insert(root, array[i]);
+      playTone(valueToFrequency(array[i], size), noteDuration / 2, ctx.currentTime);
+      
+      if (visualCallback) {
+        visualCallback([...array], [i]);
+        await delay(25);
+      }
+    }
+    
+    const result: number[] = [];
+    await inorder(root, result);
+    
+    for (let i = 0; i < result.length; i++) array[i] = result[i];
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
+// Franceschini Sort - In-place merge with O(1) space
+export const generateFranceschiniSort = async (size: number = 60, visualCallback?: VisualCallback, loop: boolean = true) => {
+  resetLoop();
+  
+  while (!activeLoop.stop) {
+    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const ctx = getAudioContext();
+    const noteDuration = 0.04;
+    
+    const mergeInPlace = async (left: number, mid: number, right: number) => {
+      let start = left;
+      let start2 = mid + 1;
+      
+      while (start <= mid && start2 <= right && !activeLoop.stop) {
+        if (array[start] <= array[start2]) {
+          start++;
+        } else {
+          const value = array[start2];
+          let index = start2;
+          
+          while (index !== start && !activeLoop.stop) {
+            array[index] = array[index - 1];
+            playTone(valueToFrequency(array[index], size), noteDuration, ctx.currentTime);
+            
+            if (visualCallback) {
+              visualCallback([...array], [index, index - 1]);
+              await delay(30);
+            }
+            index--;
+          }
+          array[start] = value;
+          start++;
+          mid++;
+          start2++;
+        }
+      }
+    };
+    
+    const mergeSort = async (left: number, right: number) => {
+      if (left < right && !activeLoop.stop) {
+        const mid = Math.floor((left + right) / 2);
+        await mergeSort(left, mid);
+        await mergeSort(mid + 1, right);
+        await mergeInPlace(left, mid, right);
+      }
+    };
+    
+    await mergeSort(0, array.length - 1);
+    
+    await playSortedArray(array, size, visualCallback);
+    
+    if (!loop || activeLoop.stop) break;
+    await delay(500);
+  }
+};
+
 export const sortingFunctions: Record<string, (size?: number, visualCallback?: VisualCallback, loop?: boolean) => Promise<void>> = {
   bubble: generateBubbleSort,
   quick: generateQuickSort,
@@ -1613,4 +2618,26 @@ export const sortingFunctions: Record<string, (size?: number, visualCallback?: V
   intro: generateIntroSort,
   smooth: generateSmoothSort,
   strand: generateStrandSort,
+  pigeonhole: generatePigeonholeSort,
+  flash: generateFlashSort,
+  library: generateLibrarySort,
+  block: generateBlockSort,
+  patience: generatePatienceSort,
+  tournament: generateTournamentSort,
+  tag: generateTagSort,
+  'american-flag': generateAmericanFlagSort,
+  burst: generateBurstSort,
+  sleep: generateSleepSort,
+  stalin: generateStalinSort,
+  miracle: generateMiracleSort,
+  'intelligent-design': generateIntelligentDesignSort,
+  'quantum-bogo': generateQuantumBogoSort,
+  postman: generatePostmanSort,
+  'merge-insertion': generateMergeInsertionSort,
+  'cartesian-tree': generateCartesianTreeSort,
+  'double-selection': generateDoubleSelectionSort,
+  gravity: generateGravitySort,
+  network: generateNetworkSort,
+  splay: generateSplaysort,
+  franceschini: generateFranceschiniSort,
 };
