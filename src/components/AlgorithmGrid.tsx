@@ -18,12 +18,17 @@ export const AlgorithmGrid = () => {
   );
 
   const handlePlay = async (id: string) => {
+    // If clicking the same algorithm, stop it
+    if (playingId === id) {
+      handleStop();
+      return;
+    }
+
+    // If another algorithm is playing, stop it first
     if (playingId) {
       stopAllSorting();
-      setPlayingId(null);
       setVisualArrays({});
       setHighlightIndices({});
-      toast.info("Stopped current algorithm");
     }
 
     setPlayingId(id);
