@@ -1,6 +1,7 @@
 // Audio context singleton
 let audioContext: AudioContext | null = null;
 let activeLoop: { stop: boolean } = { stop: false };
+let activeOscillators: { oscillator: OscillatorNode; gainNode: GainNode }[] = [];
 
 const getAudioContext = () => {
   if (!audioContext) {
@@ -11,7 +12,7 @@ const getAudioContext = () => {
 
 export type VisualCallback = (array: number[], highlightIndices?: number[]) => void;
 
-// Generate a tone at a specific frequency
+// Generate a tone at a specific frequency with smooth envelope to prevent clicking
 const playTone = (frequency: number, duration: number, startTime: number) => {
   const ctx = getAudioContext();
   const oscillator = ctx.createOscillator();
@@ -23,13 +24,29 @@ const playTone = (frequency: number, duration: number, startTime: number) => {
   oscillator.frequency.value = frequency;
   oscillator.type = 'sine';
 
-  // Envelope for smooth sound
+  // Smooth envelope to prevent clicking noise
+  const attackTime = 0.005; // 5ms attack
+  const releaseTime = 0.01; // 10ms release
+  const peakGain = 0.08; // Slightly lower volume to prevent clipping
+  
   gainNode.gain.setValueAtTime(0, startTime);
-  gainNode.gain.linearRampToValueAtTime(0.1, startTime + 0.01);
-  gainNode.gain.exponentialRampToValueAtTime(0.01, startTime + duration);
+  gainNode.gain.linearRampToValueAtTime(peakGain, startTime + attackTime);
+  gainNode.gain.linearRampToValueAtTime(peakGain * 0.7, startTime + duration - releaseTime);
+  gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
 
   oscillator.start(startTime);
   oscillator.stop(startTime + duration);
+
+  // Track active oscillators
+  activeOscillators.push({ oscillator, gainNode });
+
+  // Clean up after the oscillator stops
+  oscillator.onended = () => {
+    const index = activeOscillators.findIndex(ao => ao.oscillator === oscillator);
+    if (index > -1) {
+      activeOscillators.splice(index, 1);
+    }
+  };
 };
 
 // Map array value to frequency (200Hz - 800Hz range)
@@ -134,9 +151,25 @@ export const sortingAlgorithms: SortingAlgorithm[] = [
 // Helper to create delay for visual updates
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
-// Stop all active loops
+// Stop all active loops and audio
 export const stopAllSorting = () => {
   activeLoop.stop = true;
+  
+  // Stop all active oscillators immediately to prevent overlap
+  activeOscillators.forEach(({ oscillator, gainNode }) => {
+    try {
+      const ctx = getAudioContext();
+      const now = ctx.currentTime;
+      // Quick fade out to prevent clicking
+      gainNode.gain.cancelScheduledValues(now);
+      gainNode.gain.setValueAtTime(gainNode.gain.value, now);
+      gainNode.gain.linearRampToValueAtTime(0, now + 0.01);
+      oscillator.stop(now + 0.01);
+    } catch (e) {
+      // Oscillator might already be stopped
+    }
+  });
+  activeOscillators = [];
 };
 
 export const resetLoop = () => {

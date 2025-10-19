@@ -24,12 +24,13 @@ export const AlgorithmGrid = () => {
       return;
     }
 
-    // If another algorithm is playing, stop it first
-    if (playingId) {
-      stopAllSorting();
-      setVisualArrays({});
-      setHighlightIndices({});
-    }
+    // Always stop any currently playing algorithm first
+    stopAllSorting();
+    setVisualArrays({});
+    setHighlightIndices({});
+    
+    // Small delay to ensure cleanup
+    await new Promise(resolve => setTimeout(resolve, 50));
 
     setPlayingId(id);
     toast.success(`Playing ${sortingAlgorithms.find(a => a.id === id)?.name}`);
@@ -47,6 +48,9 @@ export const AlgorithmGrid = () => {
     } catch (error) {
       console.error('Error playing algorithm:', error);
       toast.error("Error playing algorithm");
+    } finally {
+      // Clean up if this algorithm is still marked as playing
+      setPlayingId(prev => prev === id ? null : prev);
     }
   };
 
@@ -141,9 +145,9 @@ export const AlgorithmGrid = () => {
             </div>
           </div>
 
-          {/* Compact Scrollable Grid */}
+          {/* Ultra Compact Scrollable Grid */}
           <div className="flex-1 overflow-y-auto pr-1 min-h-0 scrollbar-thin">
-            <div className="grid grid-cols-4 sm:grid-cols-5 md:grid-cols-6 lg:grid-cols-7 xl:grid-cols-8 2xl:grid-cols-9 gap-1.5">
+            <div className="grid grid-cols-5 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-9 xl:grid-cols-10 2xl:grid-cols-12 gap-1">
               {filteredAlgorithms.map((algorithm) => (
                 <AlgorithmCard
                   key={algorithm.id}
