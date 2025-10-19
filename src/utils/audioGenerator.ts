@@ -2,6 +2,8 @@
 let audioContext: AudioContext | null = null;
 let activeLoop: { stop: boolean } = { stop: false };
 let activeOscillators: { oscillator: OscillatorNode; gainNode: GainNode }[] = [];
+let compressor: DynamicsCompressorNode | null = null;
+let runGain: GainNode | null = null;
 
 const getAudioContext = () => {
   if (!audioContext) {
@@ -10,16 +12,35 @@ const getAudioContext = () => {
   return audioContext;
 };
 
+const ensureOutputChain = () => {
+  const ctx = getAudioContext();
+  if (!compressor) {
+    compressor = ctx.createDynamicsCompressor();
+    compressor.threshold.value = -14;
+    compressor.knee.value = 24;
+    compressor.ratio.value = 8;
+    compressor.attack.value = 0.003;
+    compressor.release.value = 0.15;
+    compressor.connect(ctx.destination);
+  }
+  if (!runGain) {
+    runGain = ctx.createGain();
+    runGain.gain.value = 0.9;
+    runGain.connect(compressor);
+  }
+  return { ctx, output: runGain };
+};
+
 export type VisualCallback = (array: number[], highlightIndices?: number[]) => void;
 
 // Generate a tone at a specific frequency with smooth envelope to prevent clicking
 const playTone = (frequency: number, duration: number, startTime: number) => {
-  const ctx = getAudioContext();
+  const { ctx, output } = ensureOutputChain();
   const oscillator = ctx.createOscillator();
   const gainNode = ctx.createGain();
 
   oscillator.connect(gainNode);
-  gainNode.connect(ctx.destination);
+  gainNode.connect(output);
 
   oscillator.frequency.value = frequency;
   oscillator.type = 'sine';
@@ -155,6 +176,21 @@ const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 export const stopAllSorting = () => {
   activeLoop.stop = true;
   
+  // Fade out and disconnect run gain to instantly silence any previous run
+  try {
+    const { ctx } = ensureOutputChain();
+    if (runGain) {
+      const now = ctx.currentTime;
+      runGain.gain.cancelScheduledValues(now);
+      runGain.gain.setValueAtTime(runGain.gain.value, now);
+      runGain.gain.linearRampToValueAtTime(0, now + 0.02);
+      // Disconnect slightly later to avoid clicks
+      setTimeout(() => {
+        try { runGain && runGain.disconnect(); } catch {}
+      }, 30);
+    }
+  } catch {}
+  
   // Stop all active oscillators immediately to prevent overlap
   activeOscillators.forEach(({ oscillator, gainNode }) => {
     try {
@@ -172,8 +208,32 @@ export const stopAllSorting = () => {
   activeOscillators = [];
 };
 
-export const resetLoop = () => {
-  activeLoop.stop = false;
+export const resetLoop = (): { stop: boolean } => {
+  // Start a new loop reference and fresh run gain with a short fade-in
+  const { ctx } = ensureOutputChain();
+  const previousRunGain = runGain;
+  runGain = ctx.createGain();
+  runGain.gain.setValueAtTime(0, ctx.currentTime);
+  if (compressor) runGain.connect(compressor);
+
+  // Fade out old run gain if exists
+  if (previousRunGain) {
+    const now = ctx.currentTime;
+    previousRunGain.gain.cancelScheduledValues(now);
+    previousRunGain.gain.setValueAtTime(previousRunGain.gain.value, now);
+    previousRunGain.gain.linearRampToValueAtTime(0, now + 0.02);
+    setTimeout(() => {
+      try { previousRunGain.disconnect(); } catch {}
+    }, 30);
+  }
+
+  // Fade in new run
+  const now = ctx.currentTime;
+  runGain.gain.linearRampToValueAtTime(0.9, now + 0.03);
+
+  // Critical: create a brand new loop token so old generators don't get re-enabled
+  activeLoop = { stop: false };
+  return activeLoop;
 };
 
 // Sorting algorithm implementations with audio feedback and visual updates
