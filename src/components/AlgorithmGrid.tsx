@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { AlgorithmCard } from "./AlgorithmCard";
 import { sortingAlgorithms, sortingFunctions, stopAllSorting, type VisualCallback } from "@/utils/audioGenerator";
 import { Input } from "@/components/ui/input";
@@ -10,6 +10,7 @@ export const AlgorithmGrid = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [visualArrays, setVisualArrays] = useState<Record<string, number[]>>({});
   const [highlightIndices, setHighlightIndices] = useState<Record<string, number[]>>({});
+  const runRef = useRef<Promise<void> | null>(null);
 
   const filteredAlgorithms = sortingAlgorithms.filter(algo =>
     algo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -28,9 +29,9 @@ export const AlgorithmGrid = () => {
     stopAllSorting();
     setVisualArrays({});
     setHighlightIndices({});
-    
-    // Small delay to ensure cleanup
-    await new Promise(resolve => setTimeout(resolve, 50));
+
+    // Wait for any ongoing run to finish to prevent overlap
+    try { await runRef.current; } catch {}
 
     setPlayingId(id);
     toast.success(`Playing ${sortingAlgorithms.find(a => a.id === id)?.name}`);
@@ -42,8 +43,9 @@ export const AlgorithmGrid = () => {
           setVisualArrays(prev => ({ ...prev, [id]: array }));
           setHighlightIndices(prev => ({ ...prev, [id]: indices || [] }));
         };
-        
-        await sortFn(60, visualCallback, true);
+        const p = sortFn(60, visualCallback, true) as Promise<void>;
+        runRef.current = p;
+        await p;
       }
     } catch (error) {
       console.error('Error playing algorithm:', error);
@@ -51,6 +53,10 @@ export const AlgorithmGrid = () => {
     } finally {
       // Clean up if this algorithm is still marked as playing
       setPlayingId(prev => prev === id ? null : prev);
+      if (runRef.current && typeof runRef.current.then === 'function') {
+        // Clear ref if it belongs to this run
+        runRef.current = null;
+      }
     }
   };
 
@@ -75,29 +81,17 @@ export const AlgorithmGrid = () => {
           </h1>
         </div>
 
-        {/* Modern Central Visualizer */}
-        <div className="flex flex-col bg-gradient-visualizer backdrop-blur-xl border border-border/30 rounded-xl p-3 mb-2 h-[35vh] shadow-glow-subtle">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex-1 min-w-0">
-              <h2 className="text-xs font-bold text-foreground/90 mb-0.5 tracking-wide uppercase">
-                {currentAlgorithm ? currentAlgorithm.name : 'Visualizer'}
-              </h2>
-              {currentAlgorithm && (
-                <p className="text-[10px] text-muted-foreground line-clamp-1">
-                  {currentAlgorithm.description}
-                </p>
-              )}
-            </div>
-            {playingId && (
-              <button
-                onClick={handleStop}
-                className="ml-2 bg-destructive/90 hover:bg-destructive text-destructive-foreground py-1 px-2.5 rounded-lg transition-fast flex items-center gap-1.5 text-[10px] font-semibold shadow-lg hover:shadow-xl"
-              >
-                <Pause className="w-3 h-3" />
-                Stop
-              </button>
-            )}
-          </div>
+        {/* Expanded Visualizer */}
+        <div className="relative flex flex-col bg-gradient-visualizer backdrop-blur-xl border border-border/30 rounded-xl p-2.5 mb-2 h-[48vh] sm:h-[50vh] md:h-[52vh] lg:h-[55vh] shadow-glow-subtle">
+          {playingId && (
+            <button
+              onClick={handleStop}
+              className="absolute top-2 right-2 bg-destructive/90 hover:bg-destructive text-destructive-foreground py-1 px-2.5 rounded-lg transition-fast flex items-center gap-1.5 text-[10px] font-semibold shadow-lg hover:shadow-xl"
+            >
+              <Pause className="w-3 h-3" />
+              Stop
+            </button>
+          )}
 
           <div className="flex-1 flex items-end gap-[1px] bg-background/30 rounded-lg p-2.5 min-h-0 backdrop-blur-sm border border-border/20">
             {visualArrays[playingId || ''] && visualArrays[playingId || ''].length > 0 ? (

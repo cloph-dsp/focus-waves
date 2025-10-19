@@ -14,20 +14,40 @@ const getAudioContext = () => {
 
 const ensureOutputChain = () => {
   const ctx = getAudioContext();
+
+  // Master high-pass to remove DC/very low rumble
+  if (!(globalThis as any).__hpf) {
+    const hpf = ctx.createBiquadFilter();
+    hpf.type = 'highpass';
+    hpf.frequency.value = 30; // cut sub-bass/DC
+    hpf.Q.value = 0.707;
+    ;(globalThis as any).__hpf = hpf;
+  }
+  const highpass: BiquadFilterNode = (globalThis as any).__hpf;
+
+  // Dynamics compressor as gentle limiter
   if (!compressor) {
     compressor = ctx.createDynamicsCompressor();
-    compressor.threshold.value = -14;
+    compressor.threshold.value = -16;
     compressor.knee.value = 24;
-    compressor.ratio.value = 8;
+    compressor.ratio.value = 6;
     compressor.attack.value = 0.003;
-    compressor.release.value = 0.15;
-    compressor.connect(ctx.destination);
+    compressor.release.value = 0.18;
+    compressor.connect(highpass);
   }
+
+  // Per-run gain (faded in/out by reset/stop)
   if (!runGain) {
     runGain = ctx.createGain();
     runGain.gain.value = 0.9;
     runGain.connect(compressor);
   }
+  // Ensure end of chain goes to speakers
+  if (highpass.numberOfOutputs && highpass.context && highpass.disconnect) {
+    try { highpass.disconnect(); } catch {}
+    highpass.connect(ctx.destination);
+  }
+
   return { ctx, output: runGain };
 };
 
@@ -46,14 +66,15 @@ const playTone = (frequency: number, duration: number, startTime: number) => {
   oscillator.type = 'sine';
 
   // Smooth envelope to prevent clicking noise
-  const attackTime = 0.005; // 5ms attack
-  const releaseTime = 0.01; // 10ms release
-  const peakGain = 0.08; // Slightly lower volume to prevent clipping
+  const attackTime = 0.003; // ~3ms attack
+  const releaseTime = 0.025; // ~25ms release
+  const peakGain = 0.07; // Slightly lower volume to prevent clipping
   
   gainNode.gain.setValueAtTime(0, startTime);
   gainNode.gain.linearRampToValueAtTime(peakGain, startTime + attackTime);
-  gainNode.gain.linearRampToValueAtTime(peakGain * 0.7, startTime + duration - releaseTime);
-  gainNode.gain.linearRampToValueAtTime(0, startTime + duration);
+  // Hold, then exponential-ish release to zero
+  gainNode.gain.setValueAtTime(peakGain, startTime + Math.max(attackTime, duration - releaseTime));
+  gainNode.gain.exponentialRampToValueAtTime(Math.max(peakGain * 0.001, 0.0001), startTime + duration);
 
   oscillator.start(startTime);
   oscillator.stop(startTime + duration);
@@ -187,6 +208,8 @@ export const stopAllSorting = () => {
       // Disconnect slightly later to avoid clicks
       setTimeout(() => {
         try { runGain && runGain.disconnect(); } catch {}
+        // Clear reference so next run creates a fresh gain
+        runGain = null;
       }, 30);
     }
   } catch {}
