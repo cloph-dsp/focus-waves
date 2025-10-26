@@ -53,6 +53,22 @@ const ensureOutputChain = () => {
 
 export type VisualCallback = (array: number[], highlightIndices?: number[]) => void;
 
+// Simple helper for the few algorithms that still show minimal visuals
+const createSimpleVisualCallback = (
+  originalCallback: VisualCallback | undefined
+): VisualCallback | undefined => {
+  if (!originalCallback) return undefined;
+  
+  let updateCounter = 0;
+  return (array: number[], highlightIndices?: number[]) => {
+    updateCounter++;
+    // Only update occasionally to prevent lag
+    if (updateCounter % 20 === 0) {
+      originalCallback([...array], highlightIndices);
+    }
+  };
+};
+
 // Generate a tone at a specific frequency with smooth envelope to prevent clicking
 const playTone = (frequency: number, duration: number, startTime: number) => {
   const { ctx, output } = ensureOutputChain();
@@ -91,26 +107,50 @@ const playTone = (frequency: number, duration: number, startTime: number) => {
   };
 };
 
-// Map array value to frequency (200Hz - 800Hz range)
+// Generate array of unique random numbers for better audio clarity
+const generateUniqueRandomArray = (size: number): number[] => {
+  // Create array of sequential numbers from 1 to size
+  const array = Array.from({ length: size }, (_, i) => i + 1);
+  
+  // Fisher-Yates shuffle for perfect randomization
+  for (let i = array.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [array[i], array[j]] = [array[j], array[i]];
+  }
+  
+  return array;
+};
+
+// Map array value to frequency using wide range for rich, full sound
 const valueToFrequency = (value: number, maxValue: number) => {
-  return 200 + (value / maxValue) * 600;
+  // Ensure value is at least 1 and normalize properly  
+  const normalizedValue = Math.max(1, value) / Math.max(1, maxValue);
+  
+  // Wide frequency range: 150Hz to 2000Hz (almost 4 octaves)
+  // Includes satisfying low tones AND clear high tones
+  const minFreq = 150;  // Rich, deep bass tones
+  const maxFreq = 2000; // Bright, clear treble tones
+  
+  return minFreq + normalizedValue * (maxFreq - minFreq);
 };
 
 // Play the sorted array as a satisfying ascending scale
 const playSortedArray = async (array: number[], size: number, visualCallback?: VisualCallback) => {
   const ctx = getAudioContext();
-  const noteDuration = 0.03;
+  const noteDuration = getAdaptiveNoteDuration(0.03, size);
+  const audioDelay = getAdaptiveDelay(10, size);
   
   for (let i = 0; i < array.length && !activeLoop.stop; i++) {
     playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
     
     if (visualCallback) {
       visualCallback([...array], [i]);
-      await delay(15);
     }
+    
+    await delay(audioDelay);
   }
   
-  await delay(300);
+  await delay(getAdaptiveDelay(200, size));
 };
 
 export interface SortingAlgorithm {
@@ -193,6 +233,20 @@ export const sortingAlgorithms: SortingAlgorithm[] = [
 // Helper to create delay for visual updates
 const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
+// Calculate adaptive delay based on sample size - larger arrays play faster
+const getAdaptiveDelay = (baseDelay: number, sampleSize: number): number => {
+  // Scale factor: smaller arrays get longer delays, larger arrays get shorter delays
+  const scaleFactor = Math.max(0.05, Math.min(1.0, Math.sqrt(32 / sampleSize)));
+  return Math.max(1, baseDelay * scaleFactor); // Minimum 1ms delay
+};
+
+// Calculate adaptive note duration based on sample size
+const getAdaptiveNoteDuration = (baseDuration: number, sampleSize: number): number => {
+  // Similar scaling for note duration - faster for larger arrays
+  const scaleFactor = Math.max(0.1, Math.min(0.8, Math.sqrt(32 / sampleSize)));
+  return Math.max(0.005, baseDuration * scaleFactor); // Minimum 5ms duration
+};
+
 // Stop all active loops and audio
 export const stopAllSorting = () => {
   activeLoop.stop = true;
@@ -264,10 +318,11 @@ export const generateBubbleSort = async (size: number = 60, visualCallback?: Vis
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.05;
-
+    const noteDuration = getAdaptiveNoteDuration(0.05, size);
+    const audioDelay = getAdaptiveDelay(25, size);
+    
     for (let i = 0; i < array.length && !activeLoop.stop; i++) {
       for (let j = 0; j < array.length - i - 1 && !activeLoop.stop; j++) {
         if (array[j] > array[j + 1]) {
@@ -279,8 +334,10 @@ export const generateBubbleSort = async (size: number = 60, visualCallback?: Vis
           
           if (visualCallback) {
             visualCallback([...array], [j, j + 1]);
-            await delay(50);
           }
+          
+          // Audio-focused delay - no visual blocking
+          await delay(audioDelay);
         }
       }
     }
@@ -288,7 +345,7 @@ export const generateBubbleSort = async (size: number = 60, visualCallback?: Vis
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(300, size));
   }
 };
 
@@ -296,10 +353,11 @@ export const generateQuickSort = async (size: number = 60, visualCallback?: Visu
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
-
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
+    const audioDelay = getAdaptiveDelay(15, size);
+    
     const quickSort = async (arr: number[], low: number, high: number) => {
       if (low < high && !activeLoop.stop) {
         const pi = await partition(arr, low, high);
@@ -321,9 +379,10 @@ export const generateQuickSort = async (size: number = 60, visualCallback?: Visu
           playTone(valueToFrequency(arr[i], size), noteDuration, now);
           
           if (visualCallback) {
-            visualCallback([...arr], [i, j]);
-            await delay(30);
+            visualCallback(arr.slice(), [i, j]);
           }
+          
+          await delay(audioDelay);
         }
       }
       [arr[i + 1], arr[high]] = [arr[high], arr[i + 1]];
@@ -333,7 +392,6 @@ export const generateQuickSort = async (size: number = 60, visualCallback?: Visu
       
       if (visualCallback) {
         visualCallback([...arr], [i + 1, high]);
-        await delay(30);
       }
       
       return i + 1;
@@ -344,7 +402,7 @@ export const generateQuickSort = async (size: number = 60, visualCallback?: Visu
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(300, size));
   }
 };
 
@@ -352,9 +410,10 @@ export const generateMergeSort = async (size: number = 60, visualCallback?: Visu
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
+    const audioDelay = getAdaptiveDelay(20, size);
 
     const merge = async (arr: number[], left: number, mid: number, right: number) => {
       const leftArr = arr.slice(left, mid + 1);
@@ -374,7 +433,7 @@ export const generateMergeSort = async (size: number = 60, visualCallback?: Visu
         
         if (visualCallback) {
           visualCallback([...arr], [k]);
-          await delay(40);
+          await delay(audioDelay);
         }
         k++;
       }
@@ -387,7 +446,7 @@ export const generateMergeSort = async (size: number = 60, visualCallback?: Visu
         
         if (visualCallback) {
           visualCallback([...arr], [k - 1]);
-          await delay(40);
+          await delay(audioDelay);
         }
       }
 
@@ -399,7 +458,7 @@ export const generateMergeSort = async (size: number = 60, visualCallback?: Visu
         
         if (visualCallback) {
           visualCallback([...arr], [k - 1]);
-          await delay(40);
+          await delay(audioDelay);
         }
       }
     };
@@ -418,7 +477,7 @@ export const generateMergeSort = async (size: number = 60, visualCallback?: Visu
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -426,9 +485,10 @@ export const generateInsertionSort = async (size: number = 60, visualCallback?: 
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
+    const visualDelay = getAdaptiveDelay(40, size);
 
     for (let i = 1; i < array.length && !activeLoop.stop; i++) {
       const key = array[i];
@@ -439,7 +499,7 @@ export const generateInsertionSort = async (size: number = 60, visualCallback?: 
         
         if (visualCallback) {
           visualCallback([...array], [j, j + 1]);
-          await delay(40);
+          await delay(visualDelay);
         }
         j--;
       }
@@ -448,14 +508,14 @@ export const generateInsertionSort = async (size: number = 60, visualCallback?: 
       
       if (visualCallback) {
         visualCallback([...array], [j + 1]);
-        await delay(40);
+        await delay(visualDelay);
       }
     }
     
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -463,9 +523,10 @@ export const generateSelectionSort = async (size: number = 60, visualCallback?: 
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.06;
+    const noteDuration = getAdaptiveNoteDuration(0.06, size);
+    const visualDelay = getAdaptiveDelay(60, size);
 
     for (let i = 0; i < array.length - 1 && !activeLoop.stop; i++) {
       let minIdx = i;
@@ -477,7 +538,7 @@ export const generateSelectionSort = async (size: number = 60, visualCallback?: 
         
         if (visualCallback) {
           visualCallback([...array], [i, j, minIdx]);
-          await delay(60);
+          await delay(visualDelay);
         }
       }
       if (minIdx !== i) {
@@ -486,7 +547,7 @@ export const generateSelectionSort = async (size: number = 60, visualCallback?: 
         
         if (visualCallback) {
           visualCallback([...array], [i, minIdx]);
-          await delay(60);
+          await delay(visualDelay);
         }
       }
     }
@@ -494,7 +555,7 @@ export const generateSelectionSort = async (size: number = 60, visualCallback?: 
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -502,9 +563,10 @@ export const generateHeapSort = async (size: number = 60, visualCallback?: Visua
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
+    const visualDelay = getAdaptiveDelay(40, size);
 
     const heapify = async (arr: number[], n: number, i: number) => {
       let largest = i;
@@ -520,7 +582,7 @@ export const generateHeapSort = async (size: number = 60, visualCallback?: Visua
         
         if (visualCallback) {
           visualCallback([...arr], [i, largest]);
-          await delay(40);
+          await delay(visualDelay);
         }
         
         await heapify(arr, n, largest);
@@ -537,7 +599,7 @@ export const generateHeapSort = async (size: number = 60, visualCallback?: Visua
       
       if (visualCallback) {
         visualCallback([...array], [0, i]);
-        await delay(40);
+        await delay(visualDelay);
       }
       
       await heapify(array, i, 0);
@@ -546,7 +608,7 @@ export const generateHeapSort = async (size: number = 60, visualCallback?: Visua
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -555,9 +617,10 @@ export const generateShellSort = async (size: number = 60, visualCallback?: Visu
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
+    const visualDelay = getAdaptiveDelay(35, size);
 
     for (let gap = Math.floor(array.length / 2); gap > 0 && !activeLoop.stop; gap = Math.floor(gap / 2)) {
       for (let i = gap; i < array.length && !activeLoop.stop; i++) {
@@ -570,7 +633,7 @@ export const generateShellSort = async (size: number = 60, visualCallback?: Visu
           
           if (visualCallback) {
             visualCallback([...array], [j, j - gap]);
-            await delay(35);
+            await delay(visualDelay);
           }
           j -= gap;
         }
@@ -581,7 +644,7 @@ export const generateShellSort = async (size: number = 60, visualCallback?: Visu
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -590,9 +653,9 @@ export const generateCocktailSort = async (size: number = 60, visualCallback?: V
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.05;
+    const noteDuration = getAdaptiveNoteDuration(0.05, size);
     let swapped = true;
     let start = 0;
     let end = array.length - 1;
@@ -609,7 +672,7 @@ export const generateCocktailSort = async (size: number = 60, visualCallback?: V
           
           if (visualCallback) {
             visualCallback([...array], [i, i + 1]);
-            await delay(45);
+            await delay(getAdaptiveDelay(45, size));
           }
         }
       }
@@ -627,7 +690,7 @@ export const generateCocktailSort = async (size: number = 60, visualCallback?: V
           
           if (visualCallback) {
             visualCallback([...array], [i, i + 1]);
-            await delay(45);
+            await delay(getAdaptiveDelay(45, size));
           }
         }
       }
@@ -637,7 +700,7 @@ export const generateCocktailSort = async (size: number = 60, visualCallback?: V
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -646,9 +709,9 @@ export const generateCombSort = async (size: number = 60, visualCallback?: Visua
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     const shrink = 1.3;
     let gap = array.length;
     let sorted = false;
@@ -668,7 +731,7 @@ export const generateCombSort = async (size: number = 60, visualCallback?: Visua
           
           if (visualCallback) {
             visualCallback([...array], [i, i + gap]);
-            await delay(30);
+            await delay(getAdaptiveDelay(30, size));
           }
         }
       }
@@ -677,7 +740,7 @@ export const generateCombSort = async (size: number = 60, visualCallback?: Visua
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -686,9 +749,9 @@ export const generateGnomeSort = async (size: number = 60, visualCallback?: Visu
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.05;
+    const noteDuration = getAdaptiveNoteDuration(0.05, size);
     let i = 0;
 
     while (i < array.length && !activeLoop.stop) {
@@ -701,7 +764,7 @@ export const generateGnomeSort = async (size: number = 60, visualCallback?: Visu
         
         if (visualCallback) {
           visualCallback([...array], [i, i - 1]);
-          await delay(40);
+          await delay(getAdaptiveDelay(40, size));
         }
         i--;
       }
@@ -710,7 +773,7 @@ export const generateGnomeSort = async (size: number = 60, visualCallback?: Visu
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -719,9 +782,9 @@ export const generateOddEvenSort = async (size: number = 60, visualCallback?: Vi
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     let sorted = false;
 
     while (!sorted && !activeLoop.stop) {
@@ -736,7 +799,7 @@ export const generateOddEvenSort = async (size: number = 60, visualCallback?: Vi
           
           if (visualCallback) {
             visualCallback([...array], [i, i + 1]);
-            await delay(35);
+            await delay(getAdaptiveDelay(35, size));
           }
         }
       }
@@ -750,7 +813,7 @@ export const generateOddEvenSort = async (size: number = 60, visualCallback?: Vi
           
           if (visualCallback) {
             visualCallback([...array], [i, i + 1]);
-            await delay(35);
+            await delay(getAdaptiveDelay(35, size));
           }
         }
       }
@@ -759,7 +822,7 @@ export const generateOddEvenSort = async (size: number = 60, visualCallback?: Vi
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -768,9 +831,9 @@ export const generateRadixSort = async (size: number = 60, visualCallback?: Visu
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     
     const getMax = (arr: number[]) => Math.max(...arr);
     
@@ -799,7 +862,7 @@ export const generateRadixSort = async (size: number = 60, visualCallback?: Visu
             if (output[j] !== undefined) tempArr[j] = output[j];
           }
           visualCallback(tempArr, [i]);
-          await delay(25);
+          await delay(getAdaptiveDelay(25, size));
         }
       }
       
@@ -816,7 +879,7 @@ export const generateRadixSort = async (size: number = 60, visualCallback?: Visu
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -825,9 +888,9 @@ export const generateCountingSort = async (size: number = 60, visualCallback?: V
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     
     const max = Math.max(...array);
     const count = new Array(max + 1).fill(0);
@@ -844,7 +907,7 @@ export const generateCountingSort = async (size: number = 60, visualCallback?: V
         
         if (visualCallback) {
           visualCallback([...array], [index]);
-          await delay(30);
+          await delay(getAdaptiveDelay(30, size));
         }
         
         index++;
@@ -855,7 +918,7 @@ export const generateCountingSort = async (size: number = 60, visualCallback?: V
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -864,9 +927,9 @@ export const generateBucketSort = async (size: number = 60, visualCallback?: Vis
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     
     const bucketCount = 10;
     const buckets: number[][] = Array.from({ length: bucketCount }, () => []);
@@ -889,7 +952,7 @@ export const generateBucketSort = async (size: number = 60, visualCallback?: Vis
         
         if (visualCallback) {
           visualCallback([...array], [index]);
-          await delay(35);
+          await delay(getAdaptiveDelay(35, size));
         }
         index++;
       }
@@ -898,7 +961,7 @@ export const generateBucketSort = async (size: number = 60, visualCallback?: Vis
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -907,9 +970,9 @@ export const generateTimSort = async (size: number = 60, visualCallback?: Visual
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     const RUN = 32;
     
     // Insertion sort for small runs
@@ -923,7 +986,7 @@ export const generateTimSort = async (size: number = 60, visualCallback?: Visual
           
           if (visualCallback) {
             visualCallback([...arr], [j, j + 1]);
-            await delay(25);
+            await delay(getAdaptiveDelay(25, size));
           }
           j--;
         }
@@ -952,7 +1015,7 @@ export const generateTimSort = async (size: number = 60, visualCallback?: Visual
         
         if (visualCallback) {
           visualCallback([...arr], [k]);
-          await delay(25);
+          await delay(getAdaptiveDelay(25, size));
         }
         k++;
       }
@@ -990,7 +1053,7 @@ export const generateTimSort = async (size: number = 60, visualCallback?: Visual
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -999,9 +1062,9 @@ export const generateBogoSort = async (size: number = 60, visualCallback?: Visua
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.02;
+    const noteDuration = getAdaptiveNoteDuration(0.02, size);
     
     const isSorted = (arr: number[]) => {
       for (let i = 0; i < arr.length - 1; i++) {
@@ -1018,7 +1081,7 @@ export const generateBogoSort = async (size: number = 60, visualCallback?: Visua
         
         if (visualCallback) {
           visualCallback([...arr], [i, j]);
-          await delay(20);
+          await delay(getAdaptiveDelay(20, size));
         }
       }
     };
@@ -1030,7 +1093,7 @@ export const generateBogoSort = async (size: number = 60, visualCallback?: Visua
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1040,11 +1103,12 @@ export const generateBitonicSort = async (size: number = 64, visualCallback?: Vi
   
   while (!activeLoop.stop) {
     const paddedSize = Math.pow(2, Math.ceil(Math.log2(size)));
+    const uniqueArray = generateUniqueRandomArray(size);
     const array = Array.from({ length: paddedSize }, (_, i) => 
-      i < size ? Math.floor(Math.random() * size) + 1 : 0
+      i < size ? uniqueArray[i] : 0
     );
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     
     const compAndSwap = async (arr: number[], i: number, j: number, dir: boolean) => {
       if ((arr[i] > arr[j] && dir) || (arr[i] < arr[j] && !dir)) {
@@ -1053,7 +1117,7 @@ export const generateBitonicSort = async (size: number = 64, visualCallback?: Vi
         
         if (visualCallback) {
           visualCallback([...arr].slice(0, size), [i, j]);
-          await delay(25);
+          await delay(getAdaptiveDelay(25, size));
         }
       }
     };
@@ -1083,7 +1147,7 @@ export const generateBitonicSort = async (size: number = 64, visualCallback?: Vi
     await playSortedArray(array.slice(0, size), size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1092,9 +1156,9 @@ export const generateCycleSort = async (size: number = 60, visualCallback?: Visu
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.05;
+    const noteDuration = getAdaptiveNoteDuration(0.05, size);
     
     for (let cycleStart = 0; cycleStart < array.length - 1 && !activeLoop.stop; cycleStart++) {
       let item = array[cycleStart];
@@ -1113,7 +1177,7 @@ export const generateCycleSort = async (size: number = 60, visualCallback?: Visu
       
       if (visualCallback) {
         visualCallback([...array], [cycleStart, pos]);
-        await delay(60);
+        await delay(getAdaptiveDelay(60, size));
       }
       
       while (pos !== cycleStart && !activeLoop.stop) {
@@ -1129,7 +1193,7 @@ export const generateCycleSort = async (size: number = 60, visualCallback?: Visu
         
         if (visualCallback) {
           visualCallback([...array], [pos]);
-          await delay(60);
+          await delay(getAdaptiveDelay(60, size));
         }
       }
     }
@@ -1137,7 +1201,7 @@ export const generateCycleSort = async (size: number = 60, visualCallback?: Visu
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1146,9 +1210,9 @@ export const generatePancakeSort = async (size: number = 60, visualCallback?: Vi
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     
     const flip = async (arr: number[], k: number) => {
       let left = 0;
@@ -1159,7 +1223,7 @@ export const generatePancakeSort = async (size: number = 60, visualCallback?: Vi
         
         if (visualCallback) {
           visualCallback([...arr], [left, k]);
-          await delay(25);
+          await delay(getAdaptiveDelay(25, size));
         }
         left++;
         k--;
@@ -1188,7 +1252,7 @@ export const generatePancakeSort = async (size: number = 60, visualCallback?: Vi
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1197,9 +1261,9 @@ export const generateStoogeSort = async (size: number = 40, visualCallback?: Vis
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     
     const stoogeSort = async (arr: number[], l: number, h: number) => {
       if (l >= h || activeLoop.stop) return;
@@ -1210,7 +1274,7 @@ export const generateStoogeSort = async (size: number = 40, visualCallback?: Vis
         
         if (visualCallback) {
           visualCallback([...arr], [l, h]);
-          await delay(35);
+          await delay(getAdaptiveDelay(35, size));
         }
       }
       
@@ -1227,7 +1291,7 @@ export const generateStoogeSort = async (size: number = 40, visualCallback?: Vis
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1236,9 +1300,9 @@ export const generateBeadSort = async (size: number = 60, visualCallback?: Visua
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.02;
+    const noteDuration = getAdaptiveNoteDuration(0.02, size);
     
     const max = Math.max(...array);
     const beads: boolean[][] = Array.from({ length: array.length }, () => 
@@ -1274,7 +1338,7 @@ export const generateBeadSort = async (size: number = 60, visualCallback?: Visua
         
         if (visualCallback) {
           visualCallback([...array], [i]);
-          await delay(15);
+          await delay(getAdaptiveDelay(15, size));
         }
       }
     }
@@ -1282,7 +1346,7 @@ export const generateBeadSort = async (size: number = 60, visualCallback?: Visua
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1291,9 +1355,9 @@ export const generateSlowSort = async (size: number = 30, visualCallback?: Visua
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.05;
+    const noteDuration = getAdaptiveNoteDuration(0.05, size);
     
     const slowSort = async (arr: number[], i: number, j: number) => {
       if (i >= j || activeLoop.stop) return;
@@ -1308,7 +1372,7 @@ export const generateSlowSort = async (size: number = 30, visualCallback?: Visua
         
         if (visualCallback) {
           visualCallback([...arr], [m, j]);
-          await delay(50);
+          await delay(getAdaptiveDelay(50, size));
         }
       }
       
@@ -1320,7 +1384,7 @@ export const generateSlowSort = async (size: number = 30, visualCallback?: Visua
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1329,9 +1393,9 @@ export const generateBogobogoSort = async (size: number = 20, visualCallback?: V
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.02;
+    const noteDuration = getAdaptiveNoteDuration(0.02, size);
     let attempts = 0;
     const maxAttempts = 1000; // Safety limit
     
@@ -1350,7 +1414,7 @@ export const generateBogobogoSort = async (size: number = 20, visualCallback?: V
         
         if (visualCallback) {
           visualCallback([...arr], [i, j]);
-          await delay(15);
+          await delay(getAdaptiveDelay(15, size));
         }
       }
     };
@@ -1375,7 +1439,7 @@ export const generateBogobogoSort = async (size: number = 20, visualCallback?: V
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1384,9 +1448,9 @@ export const generateBinaryInsertionSort = async (size: number = 60, visualCallb
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     
     const binarySearch = (arr: number[], item: number, low: number, high: number) => {
       while (low <= high) {
@@ -1412,21 +1476,21 @@ export const generateBinaryInsertionSort = async (size: number = 60, visualCallb
         
         if (visualCallback) {
           visualCallback([...array], [j, j + 1]);
-          await delay(35);
+          await delay(getAdaptiveDelay(35, size));
         }
       }
       array[pos] = key;
       
       if (visualCallback) {
         visualCallback([...array], [pos]);
-        await delay(35);
+        await delay(getAdaptiveDelay(35, size));
       }
     }
     
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1435,9 +1499,9 @@ export const generateTreeSort = async (size: number = 60, visualCallback?: Visua
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     
     class TreeNode {
       value: number;
@@ -1472,7 +1536,7 @@ export const generateTreeSort = async (size: number = 60, visualCallback?: Visua
         
         if (visualCallback) {
           visualCallback([...result, ...Array(array.length - result.length).fill(0)], [result.length - 1]);
-          await delay(40);
+          await delay(getAdaptiveDelay(40, size));
         }
         
         await inorderTraversal(root.right, result);
@@ -1494,7 +1558,7 @@ export const generateTreeSort = async (size: number = 60, visualCallback?: Visua
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1503,9 +1567,9 @@ export const generateIntroSort = async (size: number = 60, visualCallback?: Visu
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     const maxDepth = Math.floor(Math.log2(array.length)) * 2;
     
     const insertionSort = async (arr: number[], left: number, right: number) => {
@@ -1518,7 +1582,7 @@ export const generateIntroSort = async (size: number = 60, visualCallback?: Visu
           
           if (visualCallback) {
             visualCallback([...arr], [j, j + 1]);
-            await delay(30);
+            await delay(getAdaptiveDelay(30, size));
           }
           j--;
         }
@@ -1540,7 +1604,7 @@ export const generateIntroSort = async (size: number = 60, visualCallback?: Visu
         
         if (visualCallback) {
           visualCallback([...arr], [i, largest]);
-          await delay(30);
+          await delay(getAdaptiveDelay(30, size));
         }
         
         await heapify(arr, n, largest);
@@ -1577,7 +1641,7 @@ export const generateIntroSort = async (size: number = 60, visualCallback?: Visu
           
           if (visualCallback) {
             visualCallback([...arr], [i, j]);
-            await delay(30);
+            await delay(getAdaptiveDelay(30, size));
           }
         }
       }
@@ -1608,7 +1672,7 @@ export const generateIntroSort = async (size: number = 60, visualCallback?: Visu
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1617,9 +1681,9 @@ export const generateSmoothSort = async (size: number = 60, visualCallback?: Vis
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     
     // Simplified smooth sort (using heap-like behavior with smooth transitions)
     const leonardo = [1, 1];
@@ -1637,7 +1701,7 @@ export const generateSmoothSort = async (size: number = 60, visualCallback?: Vis
           
           if (visualCallback) {
             visualCallback([...arr], [left, root]);
-            await delay(35);
+            await delay(getAdaptiveDelay(35, size));
           }
           root = left;
         } else {
@@ -1658,7 +1722,7 @@ export const generateSmoothSort = async (size: number = 60, visualCallback?: Vis
       
       if (visualCallback) {
         visualCallback([...array], [0, i]);
-        await delay(35);
+        await delay(getAdaptiveDelay(35, size));
       }
       
       await sift(array, 0, i);
@@ -1667,7 +1731,7 @@ export const generateSmoothSort = async (size: number = 60, visualCallback?: Vis
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1676,9 +1740,9 @@ export const generateStrandSort = async (size: number = 60, visualCallback?: Vis
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     
     const merge = (left: number[], right: number[]): number[] => {
       const result: number[] = [];
@@ -1710,7 +1774,7 @@ export const generateStrandSort = async (size: number = 60, visualCallback?: Vis
           if (visualCallback) {
             const display = [...result, ...sublist, ...remaining];
             visualCallback(display.slice(0, array.length), [result.length + sublist.length - 1]);
-            await delay(40);
+            await delay(getAdaptiveDelay(40, size));
           }
         } else {
           remaining.push(input[i]);
@@ -1722,7 +1786,7 @@ export const generateStrandSort = async (size: number = 60, visualCallback?: Vis
       
       if (visualCallback) {
         visualCallback([...result, ...input].slice(0, array.length), []);
-        await delay(40);
+        await delay(getAdaptiveDelay(40, size));
       }
     }
     
@@ -1733,7 +1797,7 @@ export const generateStrandSort = async (size: number = 60, visualCallback?: Vis
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1742,9 +1806,9 @@ export const generatePigeonholeSort = async (size: number = 60, visualCallback?:
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     
     const min = Math.min(...array);
     const max = Math.max(...array);
@@ -1757,7 +1821,7 @@ export const generatePigeonholeSort = async (size: number = 60, visualCallback?:
       
       if (visualCallback) {
         visualCallback([...array], [i]);
-        await delay(30);
+        await delay(getAdaptiveDelay(30, size));
       }
     }
     
@@ -1769,7 +1833,7 @@ export const generatePigeonholeSort = async (size: number = 60, visualCallback?:
         
         if (visualCallback) {
           visualCallback([...array], [index]);
-          await delay(30);
+          await delay(getAdaptiveDelay(30, size));
         }
         index++;
       }
@@ -1778,7 +1842,7 @@ export const generatePigeonholeSort = async (size: number = 60, visualCallback?:
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1787,9 +1851,9 @@ export const generateFlashSort = async (size: number = 60, visualCallback?: Visu
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     const m = Math.floor(size * 0.43);
     
     const min = Math.min(...array);
@@ -1804,7 +1868,7 @@ export const generateFlashSort = async (size: number = 60, visualCallback?: Visu
       
       if (visualCallback) {
         visualCallback([...array], [i]);
-        await delay(25);
+        await delay(getAdaptiveDelay(25, size));
       }
     }
     
@@ -1819,7 +1883,7 @@ export const generateFlashSort = async (size: number = 60, visualCallback?: Visu
         
         if (visualCallback) {
           visualCallback([...array], [i, j]);
-          await delay(25);
+          await delay(getAdaptiveDelay(25, size));
         }
         L[k]--;
       }
@@ -1830,7 +1894,7 @@ export const generateFlashSort = async (size: number = 60, visualCallback?: Visu
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1839,9 +1903,9 @@ export const generateLibrarySort = async (size: number = 60, visualCallback?: Vi
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     const epsilon = 1;
     const lib = new Array(array.length * (1 + epsilon)).fill(null);
     
@@ -1863,7 +1927,7 @@ export const generateLibrarySort = async (size: number = 60, visualCallback?: Vi
       if (visualCallback) {
         const display = lib.filter(x => x !== null).slice(0, array.length);
         visualCallback([...display], [pos]);
-        await delay(35);
+        await delay(getAdaptiveDelay(35, size));
       }
       libSize++;
     }
@@ -1874,7 +1938,7 @@ export const generateLibrarySort = async (size: number = 60, visualCallback?: Vi
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1883,9 +1947,9 @@ export const generateBlockSort = async (size: number = 60, visualCallback?: Visu
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     
     const blockSize = Math.floor(Math.sqrt(array.length));
     
@@ -1900,7 +1964,7 @@ export const generateBlockSort = async (size: number = 60, visualCallback?: Visu
           
           if (visualCallback) {
             visualCallback([...array], [k, k + 1]);
-            await delay(30);
+            await delay(getAdaptiveDelay(30, size));
           }
           k--;
         }
@@ -1911,7 +1975,7 @@ export const generateBlockSort = async (size: number = 60, visualCallback?: Visu
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1920,9 +1984,9 @@ export const generatePatienceSort = async (size: number = 60, visualCallback?: V
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     const piles: number[][] = [];
     
     for (let i = 0; i < array.length && !activeLoop.stop; i++) {
@@ -1935,7 +1999,7 @@ export const generatePatienceSort = async (size: number = 60, visualCallback?: V
           
           if (visualCallback) {
             visualCallback([...array], [i]);
-            await delay(30);
+            await delay(getAdaptiveDelay(30, size));
           }
           break;
         }
@@ -1946,7 +2010,7 @@ export const generatePatienceSort = async (size: number = 60, visualCallback?: V
         
         if (visualCallback) {
           visualCallback([...array], [i]);
-          await delay(30);
+          await delay(getAdaptiveDelay(30, size));
         }
       }
     }
@@ -1966,14 +2030,14 @@ export const generatePatienceSort = async (size: number = 60, visualCallback?: V
       
       if (visualCallback) {
         visualCallback([...array], [index - 1]);
-        await delay(30);
+        await delay(getAdaptiveDelay(30, size));
       }
     }
     
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -1982,9 +2046,9 @@ export const generateTournamentSort = async (size: number = 60, visualCallback?:
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     const tree = [...array];
     
     for (let i = 0; i < array.length && !activeLoop.stop; i++) {
@@ -1995,7 +2059,7 @@ export const generateTournamentSort = async (size: number = 60, visualCallback?:
         
         if (visualCallback) {
           visualCallback([...tree], [j, minIdx]);
-          await delay(25);
+          await delay(getAdaptiveDelay(25, size));
         }
       }
       array[i] = tree[minIdx];
@@ -2004,14 +2068,14 @@ export const generateTournamentSort = async (size: number = 60, visualCallback?:
       
       if (visualCallback) {
         visualCallback([...array], [i]);
-        await delay(40);
+        await delay(getAdaptiveDelay(40, size));
       }
     }
     
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2020,9 +2084,9 @@ export const generateTagSort = async (size: number = 60, visualCallback?: Visual
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     const tags = array.map((val, idx) => ({ val, idx }));
     
     tags.sort((a, b) => {
@@ -2036,14 +2100,14 @@ export const generateTagSort = async (size: number = 60, visualCallback?: Visual
       
       if (visualCallback) {
         visualCallback([...array], [i]);
-        await delay(25);
+        await delay(getAdaptiveDelay(25, size));
       }
     }
     
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2052,9 +2116,9 @@ export const generateAmericanFlagSort = async (size: number = 60, visualCallback
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     const maxDigits = Math.max(...array).toString().length;
     
     for (let digit = maxDigits - 1; digit >= 0 && !activeLoop.stop; digit--) {
@@ -2067,7 +2131,7 @@ export const generateAmericanFlagSort = async (size: number = 60, visualCallback
         
         if (visualCallback) {
           visualCallback([...array], [i]);
-          await delay(25);
+          await delay(getAdaptiveDelay(25, size));
         }
       }
       
@@ -2082,7 +2146,7 @@ export const generateAmericanFlagSort = async (size: number = 60, visualCallback
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2091,9 +2155,9 @@ export const generateBurstSort = async (size: number = 60, visualCallback?: Visu
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     
     const buckets: Map<number, number[]> = new Map();
     for (let i = 0; i < array.length && !activeLoop.stop; i++) {
@@ -2104,7 +2168,7 @@ export const generateBurstSort = async (size: number = 60, visualCallback?: Visu
       
       if (visualCallback) {
         visualCallback([...array], [i]);
-        await delay(25);
+        await delay(getAdaptiveDelay(25, size));
       }
     }
     
@@ -2117,7 +2181,7 @@ export const generateBurstSort = async (size: number = 60, visualCallback?: Visu
         
         if (visualCallback) {
           visualCallback([...array], [index - 1]);
-          await delay(25);
+          await delay(getAdaptiveDelay(25, size));
         }
       }
     }
@@ -2125,7 +2189,7 @@ export const generateBurstSort = async (size: number = 60, visualCallback?: Visu
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2134,9 +2198,9 @@ export const generateSleepSort = async (size: number = 60, visualCallback?: Visu
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     const result: number[] = [];
     const promises: Promise<void>[] = [];
     
@@ -2159,14 +2223,14 @@ export const generateSleepSort = async (size: number = 60, visualCallback?: Visu
       array[i] = result[i];
       if (visualCallback) {
         visualCallback([...array], [i]);
-        await delay(20);
+        await delay(getAdaptiveDelay(20, size));
       }
     }
     
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2175,9 +2239,9 @@ export const generateStalinSort = async (size: number = 60, visualCallback?: Vis
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     const result = [array[0]];
     
     playTone(valueToFrequency(array[0], size), noteDuration, ctx.currentTime);
@@ -2189,13 +2253,13 @@ export const generateStalinSort = async (size: number = 60, visualCallback?: Vis
         
         if (visualCallback) {
           visualCallback([...result], [result.length - 1]);
-          await delay(40);
+          await delay(getAdaptiveDelay(40, size));
         }
       } else {
         playTone(valueToFrequency(array[i], size) * 0.5, noteDuration * 0.5, ctx.currentTime);
         
         if (visualCallback) {
-          await delay(30);
+          await delay(getAdaptiveDelay(30, size));
         }
       }
     }
@@ -2205,7 +2269,7 @@ export const generateStalinSort = async (size: number = 60, visualCallback?: Vis
     await playSortedArray(result, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2214,9 +2278,9 @@ export const generateMiracleSort = async (size: number = 60, visualCallback?: Vi
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.1;
+    const noteDuration = getAdaptiveNoteDuration(0.1, size);
     
     const isSorted = () => {
       for (let i = 0; i < array.length - 1; i++) {
@@ -2233,7 +2297,7 @@ export const generateMiracleSort = async (size: number = 60, visualCallback?: Vi
       
       if (visualCallback) {
         visualCallback([...array], []);
-        await delay(100);
+        await delay(getAdaptiveDelay(100, size));
       }
       checks++;
     }
@@ -2243,7 +2307,7 @@ export const generateMiracleSort = async (size: number = 60, visualCallback?: Vi
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2252,16 +2316,16 @@ export const generateIntelligentDesignSort = async (size: number = 60, visualCal
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.02;
+    const noteDuration = getAdaptiveNoteDuration(0.02, size);
     
     for (let i = 0; i < array.length && !activeLoop.stop; i++) {
       playTone(valueToFrequency(array[i], size), noteDuration, ctx.currentTime);
       
       if (visualCallback) {
         visualCallback([...array], [i]);
-        await delay(15);
+        await delay(getAdaptiveDelay(15, size));
       }
     }
     
@@ -2270,7 +2334,7 @@ export const generateIntelligentDesignSort = async (size: number = 60, visualCal
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2279,9 +2343,9 @@ export const generateQuantumBogoSort = async (size: number = 60, visualCallback?
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     
     const isSorted = () => {
       for (let i = 0; i < array.length - 1; i++) {
@@ -2300,7 +2364,7 @@ export const generateQuantumBogoSort = async (size: number = 60, visualCallback?
       
       if (visualCallback) {
         visualCallback([...array], []);
-        await delay(50);
+        await delay(getAdaptiveDelay(50, size));
       }
       attempts++;
     }
@@ -2310,7 +2374,7 @@ export const generateQuantumBogoSort = async (size: number = 60, visualCallback?
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2319,9 +2383,9 @@ export const generatePostmanSort = async (size: number = 60, visualCallback?: Vi
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     const buckets = 10;
     
     for (let pass = 0; pass < 2 && !activeLoop.stop; pass++) {
@@ -2334,7 +2398,7 @@ export const generatePostmanSort = async (size: number = 60, visualCallback?: Vi
         
         if (visualCallback) {
           visualCallback([...array], [i]);
-          await delay(25);
+          await delay(getAdaptiveDelay(25, size));
         }
       }
       
@@ -2350,7 +2414,7 @@ export const generatePostmanSort = async (size: number = 60, visualCallback?: Vi
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2359,14 +2423,14 @@ export const generateMergeInsertionSort = async (size: number = 60, visualCallba
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     
     if (array.length <= 1) {
       await playSortedArray(array, size, visualCallback);
       if (!loop || activeLoop.stop) break;
-      await delay(500);
+      await delay(getAdaptiveDelay(500, size));
       continue;
     }
     
@@ -2381,7 +2445,7 @@ export const generateMergeInsertionSort = async (size: number = 60, visualCallba
       
       if (visualCallback) {
         visualCallback([...array], [i, i + 1]);
-        await delay(35);
+        await delay(getAdaptiveDelay(35, size));
       }
     }
     
@@ -2394,7 +2458,7 @@ export const generateMergeInsertionSort = async (size: number = 60, visualCallba
       
       if (visualCallback) {
         visualCallback([...sorted], [pos]);
-        await delay(35);
+        await delay(getAdaptiveDelay(35, size));
       }
     }
     
@@ -2403,7 +2467,7 @@ export const generateMergeInsertionSort = async (size: number = 60, visualCallba
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2412,9 +2476,9 @@ export const generateCartesianTreeSort = async (size: number = 60, visualCallbac
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     
     interface Node {
       value: number;
@@ -2440,7 +2504,7 @@ export const generateCartesianTreeSort = async (size: number = 60, visualCallbac
       
       if (visualCallback) {
         visualCallback([...result], [result.length - 1]);
-        await delay(35);
+        await delay(getAdaptiveDelay(35, size));
       }
       await inorder(node.right, result);
     };
@@ -2454,7 +2518,7 @@ export const generateCartesianTreeSort = async (size: number = 60, visualCallbac
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2463,9 +2527,9 @@ export const generateDoubleSelectionSort = async (size: number = 60, visualCallb
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.05;
+    const noteDuration = getAdaptiveNoteDuration(0.05, size);
     
     for (let i = 0; i < array.length / 2 && !activeLoop.stop; i++) {
       let minIdx = i, maxIdx = i;
@@ -2477,7 +2541,7 @@ export const generateDoubleSelectionSort = async (size: number = 60, visualCallb
         
         if (visualCallback) {
           visualCallback([...array], [j, minIdx, maxIdx]);
-          await delay(30);
+          await delay(getAdaptiveDelay(30, size));
         }
       }
       
@@ -2496,14 +2560,14 @@ export const generateDoubleSelectionSort = async (size: number = 60, visualCallb
       
       if (visualCallback) {
         visualCallback([...array], [i, maxPos]);
-        await delay(50);
+        await delay(getAdaptiveDelay(50, size));
       }
     }
     
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2512,9 +2576,9 @@ export const generateGravitySort = async (size: number = 60, visualCallback?: Vi
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.03;
+    const noteDuration = getAdaptiveNoteDuration(0.03, size);
     const max = Math.max(...array);
     const abacus: number[][] = Array.from({ length: array.length }, () => []);
     
@@ -2526,7 +2590,7 @@ export const generateGravitySort = async (size: number = 60, visualCallback?: Vi
       
       if (visualCallback) {
         visualCallback([...array], [i]);
-        await delay(25);
+        await delay(getAdaptiveDelay(25, size));
       }
     }
     
@@ -2547,14 +2611,14 @@ export const generateGravitySort = async (size: number = 60, visualCallback?: Vi
       
       if (visualCallback) {
         visualCallback([...array], [i]);
-        await delay(25);
+        await delay(getAdaptiveDelay(25, size));
       }
     }
     
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2563,9 +2627,9 @@ export const generateNetworkSort = async (size: number = 60, visualCallback?: Vi
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     
     const compare = async (i: number, j: number) => {
       if (i < array.length && j < array.length && array[i] > array[j]) {
@@ -2575,7 +2639,7 @@ export const generateNetworkSort = async (size: number = 60, visualCallback?: Vi
         
         if (visualCallback) {
           visualCallback([...array], [i, j]);
-          await delay(35);
+          await delay(getAdaptiveDelay(35, size));
         }
       }
     };
@@ -2599,7 +2663,7 @@ export const generateNetworkSort = async (size: number = 60, visualCallback?: Vi
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2608,9 +2672,9 @@ export const generateSplaysort = async (size: number = 60, visualCallback?: Visu
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     
     interface Node {
       value: number;
@@ -2636,7 +2700,7 @@ export const generateSplaysort = async (size: number = 60, visualCallback?: Visu
       
       if (visualCallback) {
         visualCallback([...result], [result.length - 1]);
-        await delay(35);
+        await delay(getAdaptiveDelay(35, size));
       }
       await inorder(node.right, result);
     };
@@ -2648,7 +2712,7 @@ export const generateSplaysort = async (size: number = 60, visualCallback?: Visu
       
       if (visualCallback) {
         visualCallback([...array], [i]);
-        await delay(25);
+        await delay(getAdaptiveDelay(25, size));
       }
     }
     
@@ -2660,7 +2724,7 @@ export const generateSplaysort = async (size: number = 60, visualCallback?: Visu
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2669,9 +2733,9 @@ export const generateFranceschiniSort = async (size: number = 60, visualCallback
   resetLoop();
   
   while (!activeLoop.stop) {
-    const array = Array.from({ length: size }, () => Math.floor(Math.random() * size) + 1);
+    const array = generateUniqueRandomArray(size);
     const ctx = getAudioContext();
-    const noteDuration = 0.04;
+    const noteDuration = getAdaptiveNoteDuration(0.04, size);
     
     const mergeInPlace = async (left: number, mid: number, right: number) => {
       let start = left;
@@ -2690,7 +2754,7 @@ export const generateFranceschiniSort = async (size: number = 60, visualCallback
             
             if (visualCallback) {
               visualCallback([...array], [index, index - 1]);
-              await delay(30);
+              await delay(getAdaptiveDelay(30, size));
             }
             index--;
           }
@@ -2716,7 +2780,7 @@ export const generateFranceschiniSort = async (size: number = 60, visualCallback
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2755,7 +2819,7 @@ const generateWikiSort = async (size = 50, visualCallback?: VisualCallback, loop
         arr[start + k] = temp[k];
         playTone(valueToFrequency(arr[start + k], 100), 0.02, audioCtx.currentTime);
         visualCallback?.(arr, [start + k]);
-        await delay(25);
+        await delay(getAdaptiveDelay(25, size));
       }
     };
     
@@ -2763,7 +2827,7 @@ const generateWikiSort = async (size = 50, visualCallback?: VisualCallback, loop
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2786,7 +2850,7 @@ const generateCubeSort = async (size = 50, visualCallback?: VisualCallback, loop
               [array[i], array[j]] = [array[j], array[i]];
               playTone(valueToFrequency(array[i], 100), 0.02, audioCtx.currentTime);
               visualCallback?.(array, [i, j]);
-              await delay(30);
+              await delay(getAdaptiveDelay(30, size));
             }
           }
         }
@@ -2796,7 +2860,7 @@ const generateCubeSort = async (size = 50, visualCallback?: VisualCallback, loop
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2833,14 +2897,14 @@ const generateWeakHeapSort = async (size = 50, visualCallback?: VisualCallback, 
       [array[0], array[i]] = [array[i], array[0]];
       playTone(valueToFrequency(array[0], 100), 0.02, audioCtx.currentTime);
       visualCallback?.(array, [0, i]);
-      await delay(40);
+      await delay(getAdaptiveDelay(40, size));
       await weakHeapify(0, i);
     }
     
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2888,7 +2952,7 @@ const generateOscillatingMergeSort = async (size = 50, visualCallback?: VisualCa
         arr[start + k] = temp[k];
         playTone(valueToFrequency(arr[start + k], 100), 0.02, audioCtx.currentTime);
         visualCallback?.(arr, [start + k]);
-        await delay(30);
+        await delay(getAdaptiveDelay(30, size));
       }
     };
     
@@ -2896,7 +2960,7 @@ const generateOscillatingMergeSort = async (size = 50, visualCallback?: VisualCa
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2914,7 +2978,7 @@ const generateGrailSort = async (size = 50, visualCallback?: VisualCallback, loo
         [arr[start], arr[mid]] = [arr[mid], arr[start]];
         playTone(valueToFrequency(arr[start], 100), 0.02, audioCtx.currentTime);
         visualCallback?.(arr, [start, mid]);
-        await delay(25);
+        await delay(getAdaptiveDelay(25, size));
         start++;
         mid++;
       }
@@ -2932,7 +2996,7 @@ const generateGrailSort = async (size = 50, visualCallback?: VisualCallback, loo
         }
         playTone(valueToFrequency(arr[i], 100), 0.02, audioCtx.currentTime);
         visualCallback?.(arr, [i, j]);
-        await delay(30);
+        await delay(getAdaptiveDelay(30, size));
       }
     };
     
@@ -2950,7 +3014,7 @@ const generateGrailSort = async (size = 50, visualCallback?: VisualCallback, loo
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -2998,7 +3062,7 @@ const generateAdaptiveMergeSort = async (size = 50, visualCallback?: VisualCallb
       arr[start1 + k] = temp[k];
       playTone(valueToFrequency(arr[start1 + k], 100), 0.02, audioCtx.currentTime);
       visualCallback?.(arr, [start1 + k]);
-      await delay(25);
+      await delay(getAdaptiveDelay(25, size));
     }
   };
   
@@ -3020,7 +3084,7 @@ const generateAdaptiveMergeSort = async (size = 50, visualCallback?: VisualCallb
   await playSortedArray(array, size, visualCallback);
   
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -3046,7 +3110,7 @@ const generateLazySort = async (size = 50, visualCallback?: VisualCallback, loop
         [array[i], array[j]] = [array[j], array[i]];
         playTone(valueToFrequency(array[i], 100), 0.02, audioCtx.currentTime);
         visualCallback?.(array, [i, j]);
-        await delay(35);
+        await delay(getAdaptiveDelay(35, size));
         
         if (i > 0 && array[i - 1] > array[i]) {
           pending.push([i - 1, i]);
@@ -3060,7 +3124,7 @@ const generateLazySort = async (size = 50, visualCallback?: VisualCallback, loop
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -3082,7 +3146,7 @@ const generateSpreadsort = async (size = 50, visualCallback?: VisualCallback, lo
     buckets[bucketIndex].push(array[i]);
     playTone(valueToFrequency(array[i], 100), 0.02, audioCtx.currentTime);
     visualCallback?.(array, [i]);
-    await delay(20);
+    await delay(getAdaptiveDelay(20, size));
   }
   
   let index = 0;
@@ -3093,7 +3157,7 @@ const generateSpreadsort = async (size = 50, visualCallback?: VisualCallback, lo
       array[index] = value;
       playTone(valueToFrequency(value, 100), 0.02, audioCtx.currentTime);
       visualCallback?.(array, [index]);
-      await delay(25);
+      await delay(getAdaptiveDelay(25, size));
       index++;
     }
   }
@@ -3101,7 +3165,7 @@ const generateSpreadsort = async (size = 50, visualCallback?: VisualCallback, lo
   await playSortedArray(array, size, visualCallback);
   
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -3126,7 +3190,7 @@ const generatePDQSort = async (size = 50, visualCallback?: VisualCallback, loop 
         [arr[i], arr[j]] = [arr[j], arr[i]];
         playTone(valueToFrequency(arr[i], 100), 0.02, audioCtx.currentTime);
         visualCallback?.(arr, [i, j]);
-        await delay(30);
+        await delay(getAdaptiveDelay(30, size));
         i++;
         j--;
       }
@@ -3144,7 +3208,7 @@ const generatePDQSort = async (size = 50, visualCallback?: VisualCallback, loop 
               [arr[i], arr[j]] = [arr[j], arr[i]];
               playTone(valueToFrequency(arr[i], 100), 0.02, audioCtx.currentTime);
               visualCallback?.(arr, [i, j]);
-              await delay(25);
+              await delay(getAdaptiveDelay(25, size));
             }
           }
         }
@@ -3161,7 +3225,7 @@ const generatePDQSort = async (size = 50, visualCallback?: VisualCallback, loop 
   await playSortedArray(array, size, visualCallback);
   
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -3195,7 +3259,7 @@ const generateDualPivotQuickSort = async (size = 50, visualCallback?: VisualCall
         }
         playTone(valueToFrequency(arr[i], 100), 0.02, audioCtx.currentTime);
         visualCallback?.(arr, [i, lt, gt]);
-        await delay(30);
+        await delay(getAdaptiveDelay(30, size));
         i++;
       }
       
@@ -3212,7 +3276,7 @@ const generateDualPivotQuickSort = async (size = 50, visualCallback?: VisualCall
   await playSortedArray(array, size, visualCallback);
   
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -3244,7 +3308,7 @@ const generate3WayQuickSort = async (size = 50, visualCallback?: VisualCallback,
         }
         playTone(valueToFrequency(arr[i - 1], 100), 0.02, audioCtx.currentTime);
         visualCallback?.(arr, [i - 1, lt, gt]);
-        await delay(30);
+        await delay(getAdaptiveDelay(30, size));
       }
       
       await threeWayPartition(arr, low, lt - 1);
@@ -3255,7 +3319,7 @@ const generate3WayQuickSort = async (size = 50, visualCallback?: VisualCallback,
     await playSortedArray(array, size, visualCallback);
     
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -3278,7 +3342,7 @@ const generateBrickSort = async (size = 50, visualCallback?: VisualCallback, loo
         sorted = false;
         playTone(valueToFrequency(array[i], 100), 0.02, audioCtx.currentTime);
         visualCallback?.(array, [i, i + 1]);
-        await delay(35);
+        await delay(getAdaptiveDelay(35, size));
       }
     }
     
@@ -3289,7 +3353,7 @@ const generateBrickSort = async (size = 50, visualCallback?: VisualCallback, loo
         sorted = false;
         playTone(valueToFrequency(array[i], 100), 0.02, audioCtx.currentTime);
         visualCallback?.(array, [i, i + 1]);
-        await delay(35);
+        await delay(getAdaptiveDelay(35, size));
       }
     }
   }
@@ -3297,7 +3361,7 @@ const generateBrickSort = async (size = 50, visualCallback?: VisualCallback, loo
   await playSortedArray(array, size, visualCallback);
   
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -3324,7 +3388,7 @@ const generateShearSort = async (size = 50, visualCallback?: VisualCallback, loo
           [array[i], array[j]] = [array[j], array[i]];
           playTone(valueToFrequency(array[i], 100), 0.02, audioCtx.currentTime);
           visualCallback?.(array, [i, j]);
-          await delay(25);
+          await delay(getAdaptiveDelay(25, size));
         }
       }
     }
@@ -3343,7 +3407,7 @@ const generateShearSort = async (size = 50, visualCallback?: VisualCallback, loo
           [array[indices[i]], array[indices[j]]] = [array[indices[j]], array[indices[i]]];
           playTone(valueToFrequency(array[indices[i]], 100), 0.02, audioCtx.currentTime);
           visualCallback?.(array, indices);
-          await delay(25);
+          await delay(getAdaptiveDelay(25, size));
         }
       }
     }
@@ -3364,7 +3428,7 @@ const generateShearSort = async (size = 50, visualCallback?: VisualCallback, loo
   await playSortedArray(array, size, visualCallback);
   
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -3393,7 +3457,7 @@ const generateColumnsort = async (size = 50, visualCallback?: VisualCallback, lo
             [array[indices[i]], array[indices[j]]] = [array[indices[j]], array[indices[i]]];
             playTone(valueToFrequency(array[indices[i]], 100), 0.02, audioCtx.currentTime);
             visualCallback?.(array, indices);
-            await delay(30);
+            await delay(getAdaptiveDelay(30, size));
           }
         }
       }
@@ -3407,7 +3471,7 @@ const generateColumnsort = async (size = 50, visualCallback?: VisualCallback, lo
   await playSortedArray(array, size, visualCallback);
   
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 
@@ -3427,7 +3491,7 @@ const generateSamplesort = async (size = 50, visualCallback?: VisualCallback, lo
     samples.push(array[idx]);
     playTone(valueToFrequency(array[idx], 100), 0.02, audioCtx.currentTime);
     visualCallback?.(array, [idx]);
-    await delay(20);
+    await delay(getAdaptiveDelay(20, size));
   }
   
   samples.sort((a, b) => a - b);
@@ -3444,7 +3508,7 @@ const generateSamplesort = async (size = 50, visualCallback?: VisualCallback, lo
     buckets[bucketIdx].push(array[i]);
     playTone(valueToFrequency(array[i], 100), 0.02, audioCtx.currentTime);
     visualCallback?.(array, [i]);
-    await delay(20);
+    await delay(getAdaptiveDelay(20, size));
   }
   
   let index = 0;
@@ -3455,7 +3519,7 @@ const generateSamplesort = async (size = 50, visualCallback?: VisualCallback, lo
       array[index] = value;
       playTone(valueToFrequency(value, 100), 0.02, audioCtx.currentTime);
       visualCallback?.(array, [index]);
-      await delay(25);
+      await delay(getAdaptiveDelay(25, size));
       index++;
     }
   }
@@ -3463,7 +3527,7 @@ const generateSamplesort = async (size = 50, visualCallback?: VisualCallback, lo
   await playSortedArray(array, size, visualCallback);
   
     if (!loop || activeLoop.stop) break;
-    await delay(500);
+    await delay(getAdaptiveDelay(500, size));
   }
 };
 

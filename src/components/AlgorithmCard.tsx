@@ -1,8 +1,7 @@
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Play, Pause, Info } from "lucide-react";
+import { Play, Pause } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { useState } from "react";
 import type { SortingAlgorithm } from "@/utils/audioGenerator";
 
 interface AlgorithmCardProps {
@@ -13,33 +12,92 @@ interface AlgorithmCardProps {
 
 export const AlgorithmCard = ({ algorithm, isPlaying, onPlay }: AlgorithmCardProps) => {
   return (
-    <Card className={`group relative overflow-hidden backdrop-blur-xl transition-fast cursor-pointer ${
-      isPlaying 
-        ? 'bg-primary/25 border-primary/70 shadow-glow-subtle scale-[0.98]' 
-        : 'bg-gradient-card border-border/40 hover:border-primary/60 hover:shadow-glow-subtle hover:scale-[1.01]'
-    }`} onClick={onPlay}>
-      <div className={`absolute inset-0 bg-gradient-to-br ${algorithm.color} opacity-0 group-hover:opacity-15 transition-opacity duration-300`} />
+    <Card 
+      className={`group relative overflow-hidden backdrop-blur-lg transition-all duration-300 cursor-pointer border shadow-lg hover:shadow-2xl ${
+        isPlaying 
+          ? 'bg-slate-800/90 ring-2 ring-blue-400 scale-105 border-slate-600' 
+          : 'bg-slate-900/80 hover:bg-slate-800/90 hover:scale-105 border-slate-700 hover:border-slate-600'
+      }`} 
+      onClick={onPlay}
+    >
+      {/* Gradient overlay */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${algorithm.color} opacity-10 group-hover:opacity-20 transition-opacity duration-300`} />
       
-      <div className="relative p-1.5">
-        <div className="flex items-start justify-between gap-1">
-          <div className="flex-1 min-w-0">
-            <h3 className={`text-[9px] font-bold mb-0.5 transition-fast line-clamp-2 leading-tight tracking-wide ${
-              isPlaying ? 'text-primary' : 'text-foreground/90 group-hover:text-primary'
-            }`}>
-              {algorithm.name}
-            </h3>
-            <div className="flex flex-wrap gap-0.5">
-              <Badge variant="secondary" className="text-[7px] py-0 px-0.5 w-fit h-3 leading-none">
-                {algorithm.category}
-              </Badge>
-              <Badge variant="outline" className="text-[7px] font-mono py-0 px-0.5 w-fit h-3 leading-none">
-                {algorithm.complexity}
-              </Badge>
+      {/* Playing indicator */}
+      {isPlaying && (
+        <div className="absolute top-4 right-4 z-10">
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
+            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse animation-delay-100" />
+            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse animation-delay-200" />
+          </div>
+        </div>
+      )}
+      
+      <div className="relative p-6">
+        {/* Algorithm name */}
+        <div className="mb-4">
+          <h3 className={`text-xl font-bold mb-2 transition-colors ${
+            isPlaying ? 'text-blue-400' : 'text-slate-200 group-hover:text-blue-400'
+          }`}>
+            {algorithm.name}
+          </h3>
+          <p className="text-sm text-slate-400 leading-relaxed line-clamp-2">
+            {algorithm.description}
+          </p>
+        </div>
+
+        {/* Badges */}
+        <div className="flex flex-wrap gap-2 mb-4">
+          <Badge 
+            variant="secondary" 
+            className={`px-3 py-1 text-xs font-medium ${
+              isPlaying 
+                ? 'bg-blue-900/70 text-blue-300 border-blue-700' 
+                : 'bg-slate-800 text-slate-300 border-slate-600'
+            }`}
+          >
+            {algorithm.category}
+          </Badge>
+          <Badge 
+            variant="outline" 
+            className={`px-3 py-1 text-xs font-mono ${
+              isPlaying 
+                ? 'border-blue-600 text-blue-300' 
+                : 'border-slate-600 text-slate-400'
+            }`}
+          >
+            {algorithm.complexity}
+          </Badge>
+        </div>
+
+        {/* Play section */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${algorithm.color} opacity-80 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center shadow-lg`}>
+              {isPlaying ? (
+                <Pause className="w-5 h-5 text-white" />
+              ) : (
+                <Play className="w-5 h-5 text-white ml-0.5" />
+              )}
+            </div>
+            <div>
+              <div className={`text-sm font-semibold transition-colors ${
+                isPlaying ? 'text-blue-400' : 'text-slate-300'
+              }`}>
+                {isPlaying ? 'Now Playing' : 'Ready to Play'}
+              </div>
+              <div className="text-xs text-slate-400">
+                Click to {isPlaying ? 'stop' : 'start'}
+              </div>
             </div>
           </div>
+          
           {isPlaying && (
-            <div className="flex-shrink-0 mt-0.5">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+            <div className="flex items-center gap-1">
+              <div className="w-1 h-6 bg-blue-400 rounded-full animate-pulse" />
+              <div className="w-1 h-4 bg-blue-300 rounded-full animate-pulse animation-delay-100" />
+              <div className="w-1 h-8 bg-blue-500 rounded-full animate-pulse animation-delay-200" />
             </div>
           )}
         </div>
