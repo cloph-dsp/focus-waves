@@ -1,288 +1,478 @@
-import { useRef, useState } from "react";
-import { AlgorithmCard } from "./AlgorithmCard";
-import { sortingAlgorithms, sortingFunctions, stopAllSorting, type VisualCallback } from "@/utils/audioGenerator";
-import { Input } from "@/components/ui/input";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  sortingAlgorithms,
+  runSortingGenerator,
+  ensureAudioContextRunning,
+  configureAudioScene,
+  getAudioStressLevel,
+  type SortingAlgorithm,
+} from "@/utils/audio";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Search, Pause } from "lucide-react";
-import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Command, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { ChevronsUpDown, Pause, Play } from "lucide-react";
+
+const DEFAULT_SAMPLE_SIZE = 64;
+const MAX_DISPLAY_BARS = 512;
+
+const createBaselineArray = (size: number) => {
+  const length = Math.min(size, MAX_DISPLAY_BARS);
+  return Array.from({ length }, (_, index) => index + 1);
+};
+
+const createDisplaySnapshot = (
+  array: number[],
+  highlightIndices: number[],
+  maxItems: number,
+) => {
+  if (array.length === 0) {
+    return {
+      values: [],
+      highlights: [],
+    };
+  }
+
+  const targetLength = Math.min(maxItems, array.length);
+  if (array.length <= targetLength) {
+    return {
+      values: [...array],
+      highlights: highlightIndices
+        .map((index) => Math.min(index, array.length - 1))
+        .filter((value, position, self) => self.indexOf(value) === position)
+        .sort((a, b) => a - b),
+    };
+  }
+
+  const step = array.length / targetLength;
+  const values: number[] = new Array(targetLength);
+  const highlightBuckets = new Set<number>();
+
+  for (let i = 0; i < targetLength; i++) {
+    const start = Math.floor(i * step);
+    const end = Math.min(array.length, Math.floor((i + 1) * step));
+    let bucketMax = 0;
+    for (let j = start; j < end; j++) {
+      if (array[j] > bucketMax) bucketMax = array[j];
+    }
+    values[i] = bucketMax || array[Math.min(array.length - 1, start)];
+  }
+
+  for (const index of highlightIndices) {
+    const bucket = Math.min(Math.floor(index / step), targetLength - 1);
+    highlightBuckets.add(bucket);
+  }
+
+  return {
+    values,
+    highlights: Array.from(highlightBuckets).sort((a, b) => a - b),
+  };
+};
+
+const isAbortError = (error: unknown): boolean => {
+  if (error instanceof DOMException) {
+    return error.name === "AbortError";
+  }
+
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  return (error as { name?: string }).name === "AbortError";
+};
+
+type AlgorithmComboboxProps = {
+  algorithms: SortingAlgorithm[];
+  value: string | null;
+  onChange: (value: string) => void;
+  searchQuery: string;
+  onSearchChange: (value: string) => void;
+};
+
+const AlgorithmCombobox = ({ algorithms, value, onChange, searchQuery, onSearchChange }: AlgorithmComboboxProps) => {
+  const [open, setOpen] = useState(false);
+  const selectedAlgorithm = useMemo(
+    () => algorithms.find((algorithm) => algorithm.id === value),
+    [algorithms, value],
+  );
+
+  const handleSelect = useCallback(
+    (algorithmId: string) => {
+      onChange(algorithmId);
+      setOpen(false);
+    },
+    [onChange, setOpen],
+  );
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="h-12 justify-between rounded-xl border border-slate-800/80 bg-slate-950/60 px-5 text-sm font-medium text-slate-200 hover:bg-slate-900/80"
+        >
+          <span className="truncate text-left">
+            {selectedAlgorithm ? selectedAlgorithm.name : "Select algorithm"}
+          </span>
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[320px] border border-slate-800/80 bg-slate-950/90 p-0 shadow-2xl backdrop-blur-xl">
+        <Command className="bg-transparent text-slate-200" filter={() => 1}>
+          <CommandInput
+            placeholder="Search algorithms"
+            className="h-11"
+            value={searchQuery}
+            onValueChange={onSearchChange}
+          />
+          <CommandList className="max-h-[280px]">
+            {algorithms.length === 0 ? (
+              <div className="py-6 text-center text-sm text-slate-500">No algorithms found.</div>
+            ) : (
+              <CommandGroup className="space-y-2 p-2">
+                {algorithms.map((algorithm) => {
+                  const isActive = algorithm.id === value;
+                  return (
+                    <CommandItem
+                      key={algorithm.id}
+                      value={algorithm.id}
+                      className={`flex flex-col gap-2 rounded-lg px-3 py-3 text-slate-200 transition-colors ${
+                        isActive ? "bg-slate-900/70 text-slate-100" : "bg-transparent"
+                      }`}
+                      onSelect={() => handleSelect(algorithm.id)}
+                    >
+                      <span className="text-sm font-medium text-slate-100">{algorithm.name}</span>
+                      <div className="flex items-center gap-2 text-xs text-slate-400">
+                        <Badge
+                          variant="outline"
+                          className="border-slate-700/80 bg-transparent px-2 py-0.5 text-[10px] uppercase tracking-wide text-slate-400"
+                        >
+                          {algorithm.category}
+                        </Badge>
+                        <Badge
+                          variant="outline"
+                          className="border-slate-700/80 bg-transparent px-2 py-0.5 text-[10px] font-mono text-slate-500"
+                        >
+                          {algorithm.complexity}
+                        </Badge>
+                      </div>
+                    </CommandItem>
+                  );
+                })}
+              </CommandGroup>
+            )}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+};
 
 export const AlgorithmGrid = () => {
+  const [selectedAlgorithmId, setSelectedAlgorithmId] = useState<string | null>(null);
   const [playingId, setPlayingId] = useState<string | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [sampleSize, setSampleSize] = useState<number>(64);
+  const [sampleSize, setSampleSize] = useState<number>(DEFAULT_SAMPLE_SIZE);
   const [selectedCategory, setSelectedCategory] = useState<string>("All");
-  const [visualArrays, setVisualArrays] = useState<Record<string, number[]>>({});
-  const [highlightIndices, setHighlightIndices] = useState<Record<string, number[]>>({});
-  const runRef = useRef<Promise<void> | null>(null);
+  const [visualArray, setVisualArray] = useState<number[]>(() => createBaselineArray(DEFAULT_SAMPLE_SIZE));
+  const [highlightIndices, setHighlightIndices] = useState<number[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
-  // Get unique categories
-  const categories = ["All", ...Array.from(new Set(sortingAlgorithms.map(algo => algo.category)))];
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const runPromiseRef = useRef<Promise<void> | null>(null);
+  const isMountedRef = useRef(true);
 
-  const filteredAlgorithms = sortingAlgorithms.filter(algo => {
-    const matchesSearch = algo.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      algo.description.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      algo.category.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesCategory = selectedCategory === "All" || algo.category === selectedCategory;
-    
-    return matchesSearch && matchesCategory;
-  });
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+      abortControllerRef.current?.abort();
+    };
+  }, []);
 
-  const handlePlay = async (id: string) => {
-    // If clicking the same algorithm, stop it
-    if (playingId === id) {
+  useEffect(() => {
+    const handle = window.setTimeout(() => {
+      setDebouncedSearch(searchQuery.trim().toLowerCase());
+    }, 150);
+
+    return () => {
+      window.clearTimeout(handle);
+    };
+  }, [searchQuery]);
+
+  const categories = useMemo(
+    () => ["All", ...Array.from(new Set(sortingAlgorithms.map((algorithm) => algorithm.category)))],
+    [],
+  );
+
+  const algorithmsByCategory = useMemo(() => {
+    if (selectedCategory === "All") {
+      return sortingAlgorithms;
+    }
+
+    return sortingAlgorithms.filter((algorithm) => algorithm.category === selectedCategory);
+  }, [selectedCategory]);
+
+  const filteredAlgorithms = useMemo(() => {
+    if (!debouncedSearch) {
+      return algorithmsByCategory;
+    }
+
+    return algorithmsByCategory.filter((algorithm) => {
+      const haystack = `${algorithm.name} ${algorithm.description} ${algorithm.category} ${algorithm.complexity}`.toLowerCase();
+      return haystack.includes(debouncedSearch);
+    });
+  }, [algorithmsByCategory, debouncedSearch]);
+
+  useEffect(() => {
+    if (
+      selectedAlgorithmId &&
+      !filteredAlgorithms.some((algorithm) => algorithm.id === selectedAlgorithmId)
+    ) {
+      setSelectedAlgorithmId(null);
+    }
+  }, [filteredAlgorithms, selectedAlgorithmId]);
+
+  useEffect(() => {
+    if (!playingId) {
+      setVisualArray(createBaselineArray(sampleSize));
+      setHighlightIndices([]);
+    }
+  }, [playingId, sampleSize]);
+
+  const handleStop = () => {
+    abortControllerRef.current?.abort();
+
+    if (!isMountedRef.current) {
+      return;
+    }
+
+    setPlayingId(null);
+    setHighlightIndices([]);
+    setVisualArray(createBaselineArray(sampleSize));
+  };
+
+  const startAlgorithm = async (id: string) => {
+    abortControllerRef.current?.abort();
+
+    const previousRun = runPromiseRef.current;
+    if (previousRun) {
+      try {
+        await previousRun;
+      } catch (error) {
+        if (!isAbortError(error)) {
+          console.error("Error finishing previous algorithm:", error);
+        }
+      }
+    }
+
+    if (!isMountedRef.current) {
+      return;
+    }
+
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
+
+    setPlayingId(id);
+    setVisualArray(createBaselineArray(sampleSize));
+    setHighlightIndices([]);
+
+    try {
+      await ensureAudioContextRunning();
+    } catch (error) {
+      console.warn("Unable to resume audio context", error);
+    }
+
+    configureAudioScene({ sampleSize });
+
+    let updateCounter = 0;
+    const throttleRate = sampleSize > 1024 ? 160 : sampleSize > 512 ? 100 : sampleSize > 256 ? 60 : sampleSize > 128 ? 40 : 20;
+    const minIntervalMs = sampleSize > 2048 ? 450 : sampleSize > 1024 ? 320 : sampleSize > 512 ? 220 : sampleSize > 256 ? 150 : 90;
+    const maxDisplayItems = Math.min(sampleSize, MAX_DISPLAY_BARS);
+    let lastVisualUpdate = 0;
+
+    const runPromise = runSortingGenerator({
+      id,
+      size: sampleSize,
+      loop: true,
+      signal: controller.signal,
+      visualCallback: (array, indices) => {
+        if (!isMountedRef.current || controller.signal.aborted) {
+          return;
+        }
+
+        updateCounter++;
+        const now = performance.now();
+        const audioStress = getAudioStressLevel();
+        const audioStressed = audioStress > 0.35;
+        const throttleMultiplier = audioStressed ? 1.8 + audioStress * 2.6 : 1;
+        const effectiveThrottleRate = Math.max(1, Math.round(throttleRate * throttleMultiplier));
+        const effectiveMinInterval = minIntervalMs * throttleMultiplier;
+        const shouldUpdate =
+          updateCounter % effectiveThrottleRate === 0 || now - lastVisualUpdate >= effectiveMinInterval;
+        if (!shouldUpdate) {
+          return;
+        }
+
+        if (audioStress > 0.75 && now - lastVisualUpdate < effectiveMinInterval * 1.6) {
+          return;
+        }
+
+        lastVisualUpdate = now;
+
+        const highlightSnapshot = indices ? [...indices] : [];
+  const effectiveMaxItems = audioStress > 0.6 ? Math.min(maxDisplayItems, 256) : maxDisplayItems;
+  const { values, highlights } = createDisplaySnapshot(array, highlightSnapshot, effectiveMaxItems);
+
+        requestAnimationFrame(() => {
+          if (!isMountedRef.current || controller.signal.aborted) {
+            return;
+          }
+
+          setVisualArray(values);
+          if (audioStress > 0.6) {
+            setHighlightIndices(highlights.slice(0, Math.min(32, highlights.length)));
+          } else {
+            setHighlightIndices(highlights);
+          }
+        });
+      },
+    });
+
+    runPromiseRef.current = runPromise;
+
+    try {
+      await runPromise;
+    } catch (error) {
+      if (!isAbortError(error)) {
+        console.error("Error playing algorithm:", error);
+      }
+    } finally {
+      if (abortControllerRef.current === controller) {
+        abortControllerRef.current = null;
+      }
+
+      if (runPromiseRef.current === runPromise) {
+        runPromiseRef.current = null;
+      }
+
+      if (isMountedRef.current) {
+        setPlayingId((previous) => (previous === id ? null : previous));
+      }
+    }
+  };
+
+  const handlePlayPause = () => {
+    if (!selectedAlgorithmId) {
+      return;
+    }
+
+    if (playingId === selectedAlgorithmId) {
       handleStop();
       return;
     }
 
-    // Always stop any currently playing algorithm first
-    stopAllSorting();
-    setVisualArrays({});
-    setHighlightIndices({});
-
-    // Wait for any ongoing run to finish to prevent overlap
-    try { await runRef.current; } catch {}
-
-    setPlayingId(id);
-    toast.success(`Playing ${sortingAlgorithms.find(a => a.id === id)?.name}`);
-    
-    try {
-      const sortFn = sortingFunctions[id];
-      if (sortFn) {
-        let updateCounter = 0;
-        let lastUpdateTime = 0;
-        
-        // Minimal visual callback - prioritize audio performance
-        const visualCallback: VisualCallback = sampleSize <= 256 ? (array, indices) => {
-          updateCounter++;
-          // Only update visuals occasionally for small arrays
-          if (updateCounter % 10 === 0) {
-            setVisualArrays(prev => ({ ...prev, [id]: [...array] }));
-            setHighlightIndices(prev => ({ ...prev, [id]: indices || [] }));
-          }
-        } : undefined; // No visual updates for large arrays - audio only
-        
-        const p = sortFn(sampleSize, visualCallback, true) as Promise<void>;
-        runRef.current = p;
-        await p;
-      }
-    } catch (error) {
-      console.error('Error playing algorithm:', error);
-      toast.error("Error playing algorithm");
-    } finally {
-      // Clean up if this algorithm is still marked as playing
-      setPlayingId(prev => prev === id ? null : prev);
-      if (runRef.current && typeof runRef.current.then === 'function') {
-        // Clear ref if it belongs to this run
-        runRef.current = null;
-      }
-    }
+    void startAlgorithm(selectedAlgorithmId);
   };
 
-  const handleStop = () => {
-    stopAllSorting();
-    setPlayingId(null);
-    setVisualArrays({});
-    setHighlightIndices({});
-    toast.info("Stopped");
-  };
-
-  const currentAlgorithm = playingId ? sortingAlgorithms.find(a => a.id === playingId) : null;
-  const maxValue = visualArrays[playingId || ''] ? Math.max(...visualArrays[playingId || '']) : sampleSize;
+  const displayArray = visualArray.length ? visualArray : createBaselineArray(sampleSize);
+  const maxValue = displayArray.reduce((max, value) => (value > max ? value : max), 1);
+  const highlightSet = useMemo(() => new Set(highlightIndices), [highlightIndices]);
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
-      <div className="container mx-auto px-6 py-8 max-w-7xl">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-400 via-purple-400 to-indigo-400 bg-clip-text text-transparent mb-4">
-            Sort Your Mind
-          </h1>
-          <p className="text-lg text-slate-300 max-w-2xl mx-auto">
-            Experience the beauty of sorting algorithms through sound and visualization
-          </p>
+    <div className="min-h-screen bg-slate-950 text-slate-200">
+      <div className="mx-auto flex w-full max-w-5xl flex-col gap-10 px-6 py-12">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-[minmax(0,2.2fr)_minmax(0,1fr)_minmax(0,1fr)]">
+          <AlgorithmCombobox
+            algorithms={filteredAlgorithms}
+            value={selectedAlgorithmId}
+            onChange={setSelectedAlgorithmId}
+            searchQuery={searchQuery}
+            onSearchChange={setSearchQuery}
+          />
+          <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+            <SelectTrigger className="h-12 rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 text-sm text-slate-200">
+              <SelectValue placeholder="Category" />
+            </SelectTrigger>
+            <SelectContent className="border border-slate-800/80 bg-slate-950/90 text-slate-200">
+              {categories.map((category) => (
+                <SelectItem key={category} value={category}>
+                  {category}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Select value={sampleSize.toString()} onValueChange={(value) => setSampleSize(Number(value))}>
+            <SelectTrigger className="h-12 rounded-xl border border-slate-800/80 bg-slate-950/60 px-4 text-sm text-slate-200">
+              <SelectValue placeholder="Sample size" />
+            </SelectTrigger>
+            <SelectContent className="border border-slate-800/80 bg-slate-950/90 text-slate-200">
+              {[16, 32, 64, 128, 256, 512, 1024, 2048, 4096].map((size) => (
+                <SelectItem key={size} value={size.toString()}>
+                  {size} elements
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        {/* Controls Section */}
-        <div className="mb-8 space-y-6">
-          {/* Current Algorithm Info */}
-          {currentAlgorithm && (
-            <div className="bg-slate-800/90 backdrop-blur-lg rounded-2xl p-6 border border-slate-700 shadow-xl">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-4">
-                  <div className={`w-4 h-4 rounded-full bg-gradient-to-r ${currentAlgorithm.color} animate-pulse`} />
-                  <div>
-                    <h2 className="text-2xl font-bold text-white">{currentAlgorithm.name}</h2>
-                    <p className="text-slate-300">{currentAlgorithm.description}</p>
-                    <div className="flex items-center gap-2 mt-2">
-                      <span className="text-sm bg-blue-900/70 text-blue-200 px-3 py-1 rounded-full">
-                        {currentAlgorithm.category}
-                      </span>
-                      <span className="text-sm bg-purple-900/70 text-purple-200 px-3 py-1 rounded-full font-mono">
-                        {currentAlgorithm.complexity}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-                <button
-                  onClick={handleStop}
-                  className="bg-red-500 hover:bg-red-600 text-white px-6 py-3 rounded-xl transition-all duration-200 flex items-center gap-2 shadow-lg hover:shadow-xl"
-                >
-                  <Pause className="w-5 h-5" />
-                  Stop
-                </button>
-              </div>
-            </div>
-          )}
+        <div className="flex justify-center">
+          <Button
+            onClick={handlePlayPause}
+            disabled={!selectedAlgorithmId}
+            className="h-12 w-40 rounded-xl border border-slate-800/80 bg-slate-200/10 text-sm font-semibold uppercase tracking-wide text-slate-100 transition-colors hover:bg-slate-200/20 disabled:cursor-not-allowed disabled:border-slate-800/30 disabled:text-slate-600"
+          >
+            {playingId === selectedAlgorithmId ? (
+              <span className="flex items-center justify-center gap-2">
+                <Pause className="h-4 w-4" />
+                Pause
+              </span>
+            ) : (
+              <span className="flex items-center justify-center gap-2">
+                <Play className="h-4 w-4" />
+                Play
+              </span>
+            )}
+          </Button>
+        </div>
 
-          {/* Simplified Audio Visualizer */}
-          <div className="bg-slate-800/90 backdrop-blur-lg rounded-2xl p-6 border border-slate-700 shadow-xl">
-            <div className="h-32 flex items-center justify-center bg-slate-900 rounded-xl relative overflow-hidden">
-              {playingId && currentAlgorithm ? (
-                <div className="text-center relative z-10">
-                  <div className={`w-20 h-20 rounded-full bg-gradient-to-r ${currentAlgorithm.color} animate-pulse mb-4 mx-auto shadow-2xl`} />
-                  <p className="text-white text-xl font-bold">{currentAlgorithm.name}</p>
-                  <p className="text-slate-300 text-sm mt-1">🎵 Audio-focused sorting</p>
-                  <p className="text-slate-400 text-xs mt-2">{sampleSize} elements • Optimized for audio</p>
-                </div>
-              ) : (
-                <div className="text-center">
-                  <div className="w-16 h-16 bg-slate-700 rounded-full flex items-center justify-center mb-4 mx-auto">
-                    <Search className="w-8 h-8 text-slate-400" />
-                  </div>
-                  <p className="text-slate-300 text-lg font-medium">
-                    Select an algorithm to begin
-                  </p>
-                  <p className="text-slate-400 text-sm mt-2">
-                    🎧 Pure audio experience • Zero lag
-                  </p>
-                </div>
-              )}
-              
-              {/* Minimal visual bars for small arrays only */}
-              {playingId && sampleSize <= 256 && visualArrays[playingId] && (
-                <div className="absolute bottom-0 left-0 right-0 h-8 flex items-end gap-[1px] px-4 opacity-30">
-                  {visualArrays[playingId].slice(0, 50).map((value, i) => (
+        <div className="overflow-hidden rounded-3xl border border-slate-800/80 bg-slate-950/80 p-8 shadow-[0_0_120px_-60px_rgba(148,163,184,0.5)]">
+          <div className="relative flex h-[22rem] items-center justify-center">
+            {displayArray.length === 0 ? (
+              <div className="text-sm text-slate-500">Select an algorithm to begin</div>
+            ) : (
+              <div
+                className="flex h-full w-full items-end justify-center"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: `repeat(${displayArray.length}, minmax(0,1fr))`,
+                  gap: displayArray.length > 256 ? "1px" : "2px",
+                  alignItems: "end",
+                }}
+              >
+                {displayArray.map((value, index) => {
+                  const height = (value / maxValue) * 100;
+                  const isHighlighted = highlightSet.has(index);
+
+                  return (
                     <div
-                      key={i}
-                      className="flex-1 bg-white/40 rounded-t-sm"
+                      key={`bar-${index}`}
+                      className="rounded-sm transition-all duration-150"
                       style={{
-                        height: `${(value / maxValue) * 100}%`,
-                        minWidth: '1px'
+                        height: `${height}%`,
+                        background: isHighlighted
+                          ? "linear-gradient(180deg, rgba(148,163,184,0.9) 0%, rgba(71,85,105,0.6) 100%)"
+                          : "linear-gradient(180deg, rgba(30,41,59,0.75) 0%, rgba(15,23,42,0.55) 100%)",
+                        boxShadow: isHighlighted ? "0 0 12px rgba(148,163,184,0.35)" : "none",
                       }}
                     />
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Controls */}
-          <div className="bg-slate-800/90 backdrop-blur-lg rounded-2xl p-6 border border-slate-700 shadow-xl">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {/* Search */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-200">Search Algorithms</label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                  <Input
-                    type="text"
-                    placeholder="Search by name or description..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 h-11 bg-slate-900/70 border-slate-600 text-slate-200 placeholder:text-slate-400"
-                  />
-                </div>
+                  );
+                })}
               </div>
-
-              {/* Category Filter */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-200">Category</label>
-                <Select value={selectedCategory} onValueChange={setSelectedCategory}>
-                  <SelectTrigger className="h-11 bg-slate-900/70 border-slate-600 text-slate-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categories.map((category) => (
-                      <SelectItem key={category} value={category}>
-                        {category}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Sample Size */}
-              <div className="space-y-2">
-                <label className="text-sm font-medium text-slate-200">Sample Size</label>
-                <Select value={sampleSize.toString()} onValueChange={(value) => setSampleSize(Number(value))}>
-                  <SelectTrigger className="h-11 bg-slate-900/70 border-slate-600 text-slate-200">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {[2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048, 4096].map((size) => (
-                      <SelectItem key={size} value={size.toString()}>
-                        {size} elements
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+            )}
           </div>
-        </div>
-
-        {/* Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-          <div className="bg-slate-800/90 backdrop-blur-lg rounded-xl p-4 text-center border border-slate-700">
-            <div className="text-2xl font-bold text-blue-400">{sortingAlgorithms.length}</div>
-            <div className="text-sm text-slate-300">Total Algorithms</div>
-          </div>
-          <div className="bg-slate-800/90 backdrop-blur-lg rounded-xl p-4 text-center border border-slate-700">
-            <div className="text-2xl font-bold text-purple-400">{categories.length - 1}</div>
-            <div className="text-sm text-slate-300">Categories</div>
-          </div>
-          <div className="bg-slate-800/90 backdrop-blur-lg rounded-xl p-4 text-center border border-slate-700">
-            <div className="text-2xl font-bold text-green-400">{sampleSize}</div>
-            <div className="text-sm text-slate-300">Sample Size</div>
-          </div>
-          <div className="bg-slate-800/90 backdrop-blur-lg rounded-xl p-4 text-center border border-slate-700">
-            <div className="text-2xl font-bold text-orange-400">{playingId ? '1' : '0'}</div>
-            <div className="text-sm text-slate-300">Now Playing</div>
-          </div>
-        </div>
-
-        {/* Algorithm Grid */}
-        <div className="space-y-6">
-          <div className="flex items-center justify-between">
-            <h2 className="text-3xl font-bold text-white">
-              Choose an Algorithm
-            </h2>
-            <div className="text-slate-300 bg-slate-800/70 px-4 py-2 rounded-full border border-slate-600">
-              {filteredAlgorithms.length} of {sortingAlgorithms.length} algorithms
-            </div>
-          </div>
-
-          {filteredAlgorithms.length === 0 ? (
-            <div className="text-center py-16">
-              <div className="w-24 h-24 bg-slate-700 rounded-full flex items-center justify-center mb-6 mx-auto">
-                <Search className="w-12 h-12 text-slate-400" />
-              </div>
-              <h3 className="text-xl font-semibold text-white mb-2">No algorithms found</h3>
-              <p className="text-slate-300">Try adjusting your search or filter criteria</p>
-            </div>
-          ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredAlgorithms.map((algorithm) => (
-                <AlgorithmCard
-                  key={algorithm.id}
-                  algorithm={algorithm}
-                  isPlaying={playingId === algorithm.id}
-                  onPlay={() => handlePlay(algorithm.id)}
-                />
-              ))}
-            </div>
-          )}
         </div>
       </div>
     </div>

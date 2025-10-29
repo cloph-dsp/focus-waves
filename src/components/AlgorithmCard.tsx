@@ -2,7 +2,7 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Play, Pause } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import type { SortingAlgorithm } from "@/utils/audioGenerator";
+import type { SortingAlgorithm } from "@/utils/audio";
 
 interface AlgorithmCardProps {
   algorithm: SortingAlgorithm;
@@ -13,93 +13,76 @@ interface AlgorithmCardProps {
 export const AlgorithmCard = ({ algorithm, isPlaying, onPlay }: AlgorithmCardProps) => {
   return (
     <Card 
-      className={`group relative overflow-hidden backdrop-blur-lg transition-all duration-300 cursor-pointer border shadow-lg hover:shadow-2xl ${
+      className={`group relative overflow-hidden transition-all duration-200 cursor-pointer ${
         isPlaying 
-          ? 'bg-slate-800/90 ring-2 ring-blue-400 scale-105 border-slate-600' 
-          : 'bg-slate-900/80 hover:bg-slate-800/90 hover:scale-105 border-slate-700 hover:border-slate-600'
+          ? 'bg-slate-800/95 ring-1 ring-slate-600 scale-[1.02] border-slate-600' 
+          : 'bg-slate-900/90 hover:bg-slate-850/95 border-slate-700/50'
       }`} 
       onClick={onPlay}
     >
-      {/* Gradient overlay */}
-      <div className={`absolute inset-0 bg-gradient-to-br ${algorithm.color} opacity-10 group-hover:opacity-20 transition-opacity duration-300`} />
+      {/* Subtle gradient overlay - minimal */}
+      <div className={`absolute inset-0 bg-gradient-to-br ${algorithm.color} opacity-5 group-hover:opacity-8 transition-opacity duration-200`} />
       
-      {/* Playing indicator */}
+      {/* Simple playing indicator */}
       {isPlaying && (
-        <div className="absolute top-4 right-4 z-10">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse" />
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse animation-delay-100" />
-            <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse animation-delay-200" />
-          </div>
+        <div className="absolute top-3 right-3 z-10">
+          <div className="w-2 h-2 bg-slate-400 rounded-full animate-pulse" />
         </div>
       )}
       
-      <div className="relative p-6">
+      <div className="relative p-5">
         {/* Algorithm name */}
-        <div className="mb-4">
-          <h3 className={`text-xl font-bold mb-2 transition-colors ${
-            isPlaying ? 'text-blue-400' : 'text-slate-200 group-hover:text-blue-400'
+        <div className="mb-3">
+          <h3 className={`text-lg font-semibold mb-1.5 transition-colors ${
+            isPlaying ? 'text-slate-200' : 'text-slate-300 group-hover:text-slate-200'
           }`}>
             {algorithm.name}
           </h3>
-          <p className="text-sm text-slate-400 leading-relaxed line-clamp-2">
+          <p className="text-xs text-slate-500 leading-relaxed line-clamp-2">
             {algorithm.description}
           </p>
         </div>
 
-        {/* Badges */}
-        <div className="flex flex-wrap gap-2 mb-4">
+        {/* Badges - minimal style */}
+        <div className="flex flex-wrap gap-2 mb-3">
           <Badge 
             variant="secondary" 
-            className={`px-3 py-1 text-xs font-medium ${
+            className={`px-2 py-0.5 text-xs font-normal ${
               isPlaying 
-                ? 'bg-blue-900/70 text-blue-300 border-blue-700' 
-                : 'bg-slate-800 text-slate-300 border-slate-600'
+                ? 'bg-slate-700/80 text-slate-300 border-slate-600/50' 
+                : 'bg-slate-800/80 text-slate-400 border-slate-700/50'
             }`}
           >
             {algorithm.category}
           </Badge>
           <Badge 
             variant="outline" 
-            className={`px-3 py-1 text-xs font-mono ${
+            className={`px-2 py-0.5 text-xs font-mono ${
               isPlaying 
-                ? 'border-blue-600 text-blue-300' 
-                : 'border-slate-600 text-slate-400'
+                ? 'border-slate-600/70 text-slate-400' 
+                : 'border-slate-700/50 text-slate-500'
             }`}
           >
             {algorithm.complexity}
           </Badge>
         </div>
 
-        {/* Play section */}
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <div className={`w-12 h-12 rounded-full bg-gradient-to-r ${algorithm.color} opacity-80 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center shadow-lg`}>
-              {isPlaying ? (
-                <Pause className="w-5 h-5 text-white" />
-              ) : (
-                <Play className="w-5 h-5 text-white ml-0.5" />
-              )}
-            </div>
-            <div>
-              <div className={`text-sm font-semibold transition-colors ${
-                isPlaying ? 'text-blue-400' : 'text-slate-300'
-              }`}>
-                {isPlaying ? 'Now Playing' : 'Ready to Play'}
-              </div>
-              <div className="text-xs text-slate-400">
-                Click to {isPlaying ? 'stop' : 'start'}
-              </div>
+        {/* Simple play button */}
+        <div className="flex items-center gap-2">
+          <div className={`w-8 h-8 rounded-full bg-gradient-to-r ${algorithm.color} opacity-60 group-hover:opacity-75 transition-all duration-200 flex items-center justify-center`}>
+            {isPlaying ? (
+              <Pause className="w-3.5 h-3.5 text-white" />
+            ) : (
+              <Play className="w-3.5 h-3.5 text-white ml-0.5" />
+            )}
+          </div>
+          <div>
+            <div className={`text-xs font-medium transition-colors ${
+              isPlaying ? 'text-slate-300' : 'text-slate-400'
+            }`}>
+              {isPlaying ? 'Playing' : 'Ready'}
             </div>
           </div>
-          
-          {isPlaying && (
-            <div className="flex items-center gap-1">
-              <div className="w-1 h-6 bg-blue-400 rounded-full animate-pulse" />
-              <div className="w-1 h-4 bg-blue-300 rounded-full animate-pulse animation-delay-100" />
-              <div className="w-1 h-8 bg-blue-500 rounded-full animate-pulse animation-delay-200" />
-            </div>
-          )}
         </div>
       </div>
     </Card>
