@@ -2,6 +2,8 @@ import { SortingAlgorithm } from "./types";
 
 export const sortingAlgorithms: SortingAlgorithm[] = [
   { id: "bubble", name: "Bubble Sort", description: "Classic bubbling motion with gentle swaps", category: "Simple", complexity: "O(n²)", color: "from-purple-500 to-pink-500" },
+  { id: "optimized-bubble", name: "Optimized Bubble", description: "Stops early once passes are already sorted", category: "Simple", complexity: "O(n²)", color: "from-purple-500 to-indigo-500" },
+  { id: "reverse-bubble", name: "Reverse Bubble", description: "Bubble the largest elements toward the front", category: "Simple", complexity: "O(n²)", color: "from-pink-500 to-rose-500" },
   { id: "quick", name: "Quick Sort", description: "Fast and rhythmic partitioning sounds", category: "Efficient", complexity: "O(n log n)", color: "from-blue-500 to-cyan-500" },
   { id: "merge", name: "Merge Sort", description: "Smooth dividing and merging harmonies", category: "Efficient", complexity: "O(n log n)", color: "from-green-500 to-teal-500" },
   { id: "insertion", name: "Insertion Sort", description: "Methodical placement with clear patterns", category: "Simple", complexity: "O(n²)", color: "from-yellow-500 to-orange-500" },
@@ -17,6 +19,7 @@ export const sortingAlgorithms: SortingAlgorithm[] = [
   { id: "bucket", name: "Bucket Sort", description: "Distribution into buckets with smooth flow", category: "Distribution", complexity: "O(n+k)", color: "from-blue-500 to-violet-500" },
   { id: "tim", name: "Tim Sort", description: "Hybrid merge-insertion with complexity", category: "Hybrid", complexity: "O(n log n)", color: "from-purple-500 to-indigo-500" },
   { id: "bogo", name: "Bogo Sort", description: "Chaotic random shuffling until sorted", category: "Chaos", complexity: "O((n+1)!)", color: "from-red-500 to-orange-500" },
+  { id: "bingo", name: "Bingo Sort", description: "Simultaneously place all copies of the current minimum", category: "Simple", complexity: "O(n²)", color: "from-orange-500 to-amber-500" },
   { id: "bitonic", name: "Bitonic Sort", description: "Parallel network with symmetrical patterns", category: "Parallel", complexity: "O(log²n)", color: "from-teal-500 to-cyan-500" },
   { id: "cycle", name: "Cycle Sort", description: "Minimal writes with deliberate placement", category: "Optimization", complexity: "O(n²)", color: "from-green-500 to-emerald-500" },
   { id: "pancake", name: "Pancake Sort", description: "Flipping subarrays creates unique rhythms", category: "Flip", complexity: "O(n²)", color: "from-amber-500 to-orange-500" },
@@ -40,9 +43,6 @@ export const sortingAlgorithms: SortingAlgorithm[] = [
   { id: "burst", name: "Burst Sort", description: "Hybrid burst trie string sorting", category: "String", complexity: "O(n)", color: "from-orange-500 to-yellow-500" },
   { id: "sleep", name: "Sleep Sort", description: "Thread sleep based on value (silly!)", category: "Silly", complexity: "O(max(n))", color: "from-purple-500 to-blue-500" },
   { id: "stalin", name: "Stalin Sort", description: "Remove elements until sorted (cheating!)", category: "Silly", complexity: "O(n)", color: "from-red-500 to-gray-500" },
-  { id: "miracle", name: "Miracle Sort", description: "Wait for quantum miracle to sort", category: "Chaos", complexity: "O(∞) or O(1)", color: "from-white to-yellow-500" },
-  { id: "intelligent-design", name: "Intelligent Design", description: "Assume array is already sorted", category: "Silly", complexity: "O(1)", color: "from-blue-500 to-white" },
-  { id: "quantum-bogo", name: "Quantum Bogosort", description: "Quantum parallel universe sorting", category: "Chaos", complexity: "O(n) or O(∞)", color: "from-purple-500 to-pink-500" },
   { id: "postman", name: "Postman Sort", description: "Multi-pass distribution like mail routes", category: "Distribution", complexity: "O(nk)", color: "from-blue-500 to-green-500" },
   { id: "merge-insertion", name: "Merge-Insertion", description: "Ford-Johnson optimal comparisons", category: "Hybrid", complexity: "O(n log n)", color: "from-emerald-500 to-cyan-500" },
   { id: "cartesian-tree", name: "Cartesian Tree Sort", description: "Build cartesian tree and traverse", category: "Tree-based", complexity: "O(n log n)", color: "from-lime-500 to-teal-500" },
