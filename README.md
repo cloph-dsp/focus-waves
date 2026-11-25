@@ -1,73 +1,40 @@
-# Welcome to your Lovable project
+# Focus Waves (Rust)
 
-## Project info
+A native desktop sonification of ~100 sorting algorithms, ported from
+[cloph-dsp/focus-waves](https://github.com/cloph-dsp/focus-waves) to Rust.
 
-**URL**: https://lovable.dev/projects/681ae970-f758-4271-8c7c-685dd8009cfa
+Each algorithm repeatedly shuffles an array, sorts it while playing a short tone for every
+comparison or swap, plays the finished array as an ascending sweep, then pauses and starts
+over. The pitch maps logarithmically from 220 Hz to 1760 Hz, so the sort is both visible and
+audible.
 
-## How can I edit this code?
+## Run
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/681ae970-f758-4271-8c7c-685dd8009cfa) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
-npm run dev
+```bash
+cargo run --release
 ```
 
-**Edit a file directly in GitHub**
+Requires a working default audio output device. The UI is built with `egui`/`eframe` and
+audio with `rodio`.
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Controls
 
-**Use GitHub Codespaces**
+- **Search / category** — filter the algorithm list (100 entries).
+- **Sample size** — 16…4096 values (default 64). Larger arrays automatically lower the
+  volume and shorten notes.
+- **Play / Stop** — start or cancel the current run. Visualization shows up to 512 bars,
+  bucketed down from larger arrays; active indices are highlighted.
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Layout
 
-## What technologies are used for this project?
+- `src/catalog.rs` — algorithm metadata, mechanically converted from the original TS catalog.
+- `src/algorithms/` — one file per algorithm; `mod.rs` dispatches by catalog id.
+- `src/engine.rs` — `SortCtx` (the porting API) and the background `Runner`.
+- `src/audio.rs` — rodio waveform playback.
+- `src/app.rs` — egui interface.
 
-This project is built with:
+## Porting notes
 
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/681ae970-f758-4271-8c7c-685dd8009cfa) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+`CONTRACT.md` documents the mapping between the original TypeScript engine helpers and
+`SortCtx`. Every port keeps the same wave choice, delay constants and highlight indices as
+the original, but uses `std::thread::sleep` in cancelable slices instead of `await delay`.
