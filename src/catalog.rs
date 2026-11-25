@@ -78,4 +78,6 @@ pub const SORTING_ALGORITHMS: &[Algorithm] = &[    Algorithm { id: "bubble", nam
     Algorithm { id: "bottom-up-heap", name: "Bottom-Up Heap", description: "Heap construction from bottom with rising tones", category: "Heap-based", complexity: "O(n log n)", color: "from-orange-500 to-amber-500" },
     Algorithm { id: "binary-tree", name: "Binary Tree Sort", description: "AVL tree with balanced harmonics", category: "Tree-based", complexity: "O(n log n)", color: "from-green-500 to-cyan-500" },
     Algorithm { id: "merge3", name: "3-Way Merge", description: "Triple merging with triad harmonies", category: "Merge-based", complexity: "O(n log n)", color: "from-green-500 to-yellow-500" },
+    Algorithm { id: "bfprt", name: "BFPRT Quicksort", description: "Median-of-medians pivot with recursive quintet harmonies", category: "Efficient", complexity: "O(n log n)", color: "from-violet-500 to-blue-500" },
+    Algorithm { id: "symmerge", name: "SymMerge Sort", description: "Ratio-based stable merge with sweeping block reversals", category: "Merge-based", complexity: "O(n log n)", color: "from-emerald-500 to-cyan-500" },
 ];

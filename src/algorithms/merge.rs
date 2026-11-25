@@ -1,6 +1,8 @@
 use crate::audio::Wave;
 use crate::engine::SortCtx;
 
+// Explicit sonification/timing knobs; a struct would add noise at every call site.
+#[allow(clippy::too_many_arguments)]
 fn merge(
     ctx: &mut SortCtx,
     arr: &mut [i64],

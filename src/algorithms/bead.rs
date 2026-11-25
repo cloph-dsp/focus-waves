@@ -13,8 +13,8 @@ pub fn generateBeadSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
         let mut beads: Vec<Vec<bool>> = vec![vec![false; max]; array.len()];
 
         for i in 0..array.len() {
-            for j in 0..(array[i] as usize).min(max) {
-                beads[i][j] = true;
+            for bead in beads[i].iter_mut().take((array[i] as usize).min(max)) {
+                *bead = true;
             }
         }
 

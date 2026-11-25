@@ -18,17 +18,17 @@ pub fn generateCountingSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
         }
 
         let mut index = 0usize;
-        for i in 0..count.len() {
+        for (i, count_value) in count.iter_mut().enumerate() {
             if ctx.stopped() {
                 return;
             }
-            while count[i] > 0 && !ctx.stopped() {
+            while *count_value > 0 && !ctx.stopped() {
                 array[index] = i as i64;
                 ctx.play(ctx.freq(i as f64, size as f64), note_duration, Wave::Sine);
                 ctx.visual(&array, &[index]);
                 ctx.delay(ctx.adaptive_delay(45.0, size));
                 index += 1;
-                count[i] -= 1;
+                *count_value -= 1;
             }
         }
 

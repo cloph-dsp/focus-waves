@@ -49,11 +49,9 @@ pub fn generatePatienceSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
             let mut min_pile: Option<usize> = None;
             let mut min_value = i64::MAX;
             for (i, pile) in piles.iter().enumerate() {
-                if let Some(&v) = pile.last() {
-                    if v < min_value {
-                        min_value = v;
-                        min_pile = Some(i);
-                    }
+                if let Some(&v) = pile.last() && v < min_value {
+                    min_value = v;
+                    min_pile = Some(i);
                 }
             }
             let Some(min_pile) = min_pile else {

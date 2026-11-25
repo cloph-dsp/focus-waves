@@ -17,7 +17,7 @@ pub fn generateShearSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
             ctx.delay(ctx.adaptive_delay(200.0, size));
             continue;
         }
-        let cols = (size + rows - 1) / rows;
+        let cols = size.div_ceil(rows);
         let phases = (rows as f64).log2().ceil() as usize + 1;
 
         for _phase in 0..phases {

@@ -36,6 +36,10 @@ pub fn generateMergeInsertionSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
         }
 
         let mut sorted: Vec<i64> = pairs.iter().map(|p| p.0).collect();
+        // An odd-sized array leaves one unpaired element that must still be inserted.
+        if array.len() % 2 == 1 {
+            sorted.push(array[array.len() - 1]);
+        }
         sorted.sort_unstable();
 
         for &(_, larger) in &pairs {
@@ -53,9 +57,9 @@ pub fn generateMergeInsertionSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
             ctx.delay(ctx.adaptive_delay(200.0, size));
         }
 
-        for i in 0..array.len() {
-            array[i] = sorted[i];
-        }
+        // Cancellation can stop the insertion loop early; only copy what exists.
+        let copy_len = array.len().min(sorted.len());
+        array[..copy_len].copy_from_slice(&sorted[..copy_len]);
 
         ctx.play_sorted(&array);
         if !loop_ || ctx.stopped() {

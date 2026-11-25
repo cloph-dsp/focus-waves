@@ -36,8 +36,8 @@ fn counting_sort(
     let mut output = vec![0i64; n];
     let mut count = [0usize; 10];
 
-    for i in 0..n {
-        let digit = ((arr[i] / exp) % 10) as usize;
+    for &value in arr.iter() {
+        let digit = ((value / exp) % 10) as usize;
         count[digit] += 1;
     }
     for i in 1..10 {
@@ -69,7 +69,5 @@ fn counting_sort(
         ctx.delay(audio_delay);
     }
 
-    for i in 0..n {
-        arr[i] = output[i];
-    }
+    arr[..n].copy_from_slice(&output[..n]);
 }

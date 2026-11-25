@@ -13,18 +13,18 @@ pub fn generateStalinSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
             result.push(first);
             ctx.play(ctx.freq(first as f64, size as f64), note_duration, Wave::Sine);
         }
-        for i in 1..all.len() {
+        for &value in all.iter().skip(1) {
             if ctx.stopped() {
                 return;
             }
-            if all[i] >= result[result.len() - 1] {
-                result.push(all[i]);
-                ctx.play(ctx.freq(all[i] as f64, size as f64), note_duration, Wave::Sine);
+            if value >= result[result.len() - 1] {
+                result.push(value);
+                ctx.play(ctx.freq(value as f64, size as f64), note_duration, Wave::Sine);
                 ctx.visual(&result, &[result.len() - 1]);
                 ctx.delay(ctx.adaptive_delay(200.0, size));
             } else {
                 ctx.play(
-                    ctx.freq(all[i] as f64, size as f64) * 0.5,
+                    ctx.freq(value as f64, size as f64) * 0.5,
                     note_duration * 0.5,
                     Wave::Sine,
                 );

@@ -16,7 +16,6 @@ pub struct VisualEvent {
 /// `play` ↔ `playTone`, `delay` ↔ `delay`, `visual` ↔ `visualCallback`, etc.
 pub struct SortCtx {
     pub size: usize,
-    pub loop_: bool,
     stop: Arc<AtomicBool>,
     audio: Arc<Audio>,
     visual_tx: mpsc::Sender<VisualEvent>,
@@ -26,14 +25,12 @@ pub struct SortCtx {
 impl SortCtx {
     pub fn new(
         size: usize,
-        loop_: bool,
         stop: Arc<AtomicBool>,
         audio: Arc<Audio>,
         visual_tx: mpsc::Sender<VisualEvent>,
     ) -> Self {
         let mut ctx = Self {
             size,
-            loop_,
             stop,
             audio,
             visual_tx,
@@ -191,11 +188,28 @@ impl Runner {
         }
     }
 
-    pub fn is_playing(&self) -> bool {
+    pub fn is_playing(&mut self) -> bool {
+        if self
+            .handle
+            .as_ref()
+            .is_some_and(|handle| handle.is_finished())
+            && let Some(handle) = self.handle.take()
+        {
+            let _ = handle.join();
+        }
         self.handle.is_some()
     }
 
     pub fn start(&mut self, id: &str, size: usize) -> bool {
+        self.start_with(id, size, true)
+    }
+
+    /// One full pass (sort + final sweep), then the thread exits.
+    pub fn start_once(&mut self, id: &str, size: usize) -> bool {
+        self.start_with(id, size, false)
+    }
+
+    fn start_with(&mut self, id: &str, size: usize, loop_: bool) -> bool {
         self.stop();
         if !crate::catalog::SORTING_ALGORITHMS.iter().any(|a| a.id == id) {
             return false;
@@ -205,8 +219,8 @@ impl Runner {
         let tx = self.tx.clone();
         let id = id.to_string();
         self.handle = Some(thread::spawn(move || {
-            let mut ctx = SortCtx::new(size, true, stop, audio, tx);
-            algorithms::run(&id, &mut ctx, size, true);
+            let mut ctx = SortCtx::new(size, stop, audio, tx);
+            algorithms::run(&id, &mut ctx, size, loop_);
         }));
         true
     }
@@ -218,5 +232,41 @@ impl Runner {
         }
         self.audio.clear();
         self.stop.store(false, Ordering::Relaxed);
+    }
+}
+
+#[cfg(test)]
+mod cancellation_bench {
+    use super::*;
+    use std::time::Instant;
+
+    #[test]
+    #[ignore = "requires an audio device; measures join latency for every algorithm"]
+    fn cancellation_latency() {
+        let audio = Arc::new(Audio::new().expect("audio device required"));
+        audio.set_volume(0.0);
+        let (tx, _rx) = mpsc::channel();
+        let mut runner = Runner::new(audio, tx);
+
+        for &size in &[64usize, 256] {
+            let mut times = Vec::new();
+            for algorithm in crate::catalog::SORTING_ALGORITHMS {
+                println!("start {} size={size}", algorithm.id);
+                use std::io::Write;
+                std::io::stdout().flush().ok();
+                assert!(runner.start(algorithm.id, size), "{}", algorithm.id);
+                thread::sleep(Duration::from_millis(60));
+                let started = Instant::now();
+                runner.stop();
+                times.push(started.elapsed().as_secs_f64() * 1000.0);
+            }
+            times.sort_by(f64::total_cmp);
+            let p99 = times[times.len() * 99 / 100];
+            println!(
+                "size={size} p99={p99:.2}ms max={:.2}ms",
+                times.last().unwrap()
+            );
+            assert!(p99 < 50.0, "cancellation p99 too slow at size {size}");
+        }
     }
 }

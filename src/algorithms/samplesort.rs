@@ -30,8 +30,8 @@ pub fn generateSamplesort(ctx: &mut SortCtx, size: usize, loop_: bool) {
                 return;
             }
             let mut bucket_idx = 0usize;
-            for j in 0..samples.len() {
-                if array[i] > samples[j] {
+            for (j, &sample) in samples.iter().enumerate() {
+                if array[i] > sample {
                     bucket_idx = j + 1;
                 }
             }

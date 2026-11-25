@@ -26,7 +26,7 @@ pub fn generateBurstSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
         }
 
         let mut index = 0usize;
-        for (_, bucket) in buckets.iter_mut() {
+        for bucket in buckets.values_mut() {
             if ctx.stopped() {
                 return;
             }

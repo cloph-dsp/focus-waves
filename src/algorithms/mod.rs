@@ -71,6 +71,8 @@ mod samplesort;
 #[path = "bottom-up-heap.rs"] mod bottom_up_heap;
 #[path = "binary-tree.rs"] mod binary_tree;
 mod merge3;
+mod bfprt;
+mod symmerge;
 pub fn run(id: &str, ctx: &mut SortCtx, size: usize, loop_: bool) -> bool {
     match id {
         "bubble" => bubble::generateBubbleSort(ctx, size, loop_),
@@ -143,6 +145,8 @@ pub fn run(id: &str, ctx: &mut SortCtx, size: usize, loop_: bool) -> bool {
         "bottom-up-heap" => bottom_up_heap::generateBottomUpHeapSort(ctx, size, loop_),
         "binary-tree" => binary_tree::generateBinaryTreeSort(ctx, size, loop_),
         "merge3" => merge3::generateMerge3Sort(ctx, size, loop_),
+        "bfprt" => bfprt::generateBfprtSort(ctx, size, loop_),
+        "symmerge" => symmerge::generateSymmergeSort(ctx, size, loop_),
         _ => return false,
     }
     true

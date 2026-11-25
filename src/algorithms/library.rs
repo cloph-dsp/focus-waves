@@ -21,8 +21,8 @@ pub fn generateLibrarySort(ctx: &mut SortCtx, size: usize, loop_: bool) {
                 return;
             }
             let mut pos = 0usize;
-            for j in 0..lib_size {
-                if lib[j].is_some() && lib[j].unwrap() < array[i] {
+            for (j, &value) in lib.iter().take(lib_size).enumerate() {
+                if value.is_some_and(|v| v < array[i]) {
                     pos = j + 1;
                 }
             }
@@ -46,9 +46,8 @@ pub fn generateLibrarySort(ctx: &mut SortCtx, size: usize, loop_: bool) {
         }
 
         let sorted: Vec<i64> = lib.iter().filter_map(|&x| x).collect();
-        for i in 0..array.len() {
-            array[i] = sorted[i];
-        }
+        let n = array.len();
+        array[..n].copy_from_slice(&sorted[..n]);
 
         ctx.play_sorted(&array);
         if !loop_ || ctx.stopped() {

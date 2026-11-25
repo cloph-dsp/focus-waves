@@ -1,0 +1,65 @@
+﻿cargo :     Checking focus-waves v0.1.0 
+(C:\Users\pedro\.config\openchamber\chats\2026-11-25\session-188c9be4-d2bf-418d-b3de-f77a2a874b78)
+At line:1 char:1
++ cargo clippy --all-targets --message-format short 2>&1 | Out-File -Fi ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking fo...e-f77a2a874b78):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+src\algorithms\merge.rs:4:1: warning: this function has too many arguments (8/7)
+src\algorithms\radix.rs:39:14: warning: the loop variable `i` is only used to index `arr`
+src\algorithms\radix.rs:72:5: warning: it looks like you're manually copying between slices: help: try replacing the 
+loop by: `arr[..n].copy_from_slice(&output[..n]);`
+src\algorithms\counting.rs:21:18: warning: the loop variable `i` is used to index `count`
+src\algorithms\bitonic.rs:4:1: warning: this function has too many arguments (8/7)
+src\algorithms\bitonic.rs:22:1: warning: this function has too many arguments (8/7)
+src\algorithms\bitonic.rs:46:1: warning: this function has too many arguments (8/7)
+src\algorithms\cycle.rs:36:17: warning: this looks like you are swapping `array[pos]` and `item` manually: help: try: 
+`std::mem::swap(&mut array[pos], &mut item);`
+src\algorithms\cycle.rs:21:26: warning: the loop variable `i` is only used to index `array`
+src\algorithms\cycle.rs:57:21: warning: this looks like you are swapping `array[pos]` and `item` manually: help: try: 
+`std::mem::swap(&mut array[pos], &mut item);`
+src\algorithms\cycle.rs:45:30: warning: the loop variable `i` is only used to index `array`
+src\algorithms\bead.rs:16:22: warning: the loop variable `j` is only used to index `beads[i]`
+src\algorithms\tree.rs:47:18: warning: the loop variable `i` is only used to index `array`
+src\algorithms\strand.rs:35:22: warning: the loop variable `i` is only used to index `input`
+src\algorithms\strand.rs:64:9: warning: it looks like you're manually copying between slices: help: try replacing the 
+loop by: `array.copy_from_slice(&result[..array.len()]);`
+src\algorithms\library.rs:24:22: warning: the loop variable `j` is used to index `lib`
+src\algorithms\library.rs:49:9: warning: it looks like you're manually copying between slices: help: try replacing the 
+loop by: `array.copy_from_slice(&sorted[..array.len()]);`
+src\algorithms\patience.rs:52:17: warning: this `if` statement can be collapsed
+src\algorithms\burst.rs:29:28: warning: you seem to want to iterate on a map's values
+src\algorithms\stalin.rs:16:18: warning: the loop variable `i` is only used to index `all`
+src\algorithms\merge-insertion.rs:61:9: warning: it looks like you're manually copying between slices: help: try 
+replacing the loop by: 
+`array[..array.len().min(sorted.len())].copy_from_slice(&sorted[..array.len().min(sorted.len())]);`
+src\algorithms\double-selection.rs:14:21: warning: manually reimplementing `div_ceil`: help: consider using 
+`.div_ceil()`: `n.div_ceil(2)`
+src\algorithms\gravity.rs:29:24: warning: the loop variable `row` is only used to index `abacus`
+src\algorithms\splaysort.rs:82:9: warning: it looks like you're manually copying between slices: help: try replacing 
+the loop by: `array[..result.len()].copy_from_slice(&result[..]);`
+src\algorithms\adaptive-merge.rs:4:1: warning: this function has too many arguments (9/7)
+src\algorithms\shear.rs:20:20: warning: manually reimplementing `div_ceil`: help: consider using `.div_ceil()`: 
+`size.div_ceil(rows)`
+src\algorithms\columnsort.rs:12:20: warning: manual checked division: check performed here
+src\algorithms\columnsort.rs:12:40: warning: manually reimplementing `div_ceil`: help: consider using `.div_ceil()`: 
+`n.div_ceil(r)`
+src\algorithms\samplesort.rs:33:22: warning: the loop variable `j` is used to index `samples`
+src\algorithms\binary-tree.rs:13:18: warning: the loop variable `i` is only used to index `array`
+src\algorithms\merge3.rs:4:1: warning: this function has too many arguments (9/7)
+src\algorithms\bfprt.rs:104:1: warning: this function has too many arguments (9/7)
+src\algorithms\bfprt.rs:178:1: warning: this function has too many arguments (8/7)
+src\algorithms\symmerge.rs:5:1: warning: this function has too many arguments (8/7)
+src\algorithms\symmerge.rs:29:1: warning: this function has too many arguments (10/7)
+src\algorithms\symmerge.rs:102:1: warning: this function has too many arguments (8/7)
+src\algorithms\symmerge.rs:125:1: warning: this function has too many arguments (9/7)
+src\app.rs:165:9: warning: this `if` statement can be collapsed
+src\app.rs:965:1: warning: this function has too many arguments (9/7)
+src\audio.rs:24:51: warning: this expression creates a reference which is immediately dereferenced by the compiler: 
+help: change this to: `handle.mixer()`
+src\engine.rs:192:9: warning: this `if` statement can be collapsed
+warning: `focus-waves` (bin "focus-waves") generated 41 warnings (run `cargo clippy --fix --bin "focus-waves" -p 
+focus-waves -- ` to apply 10 suggestions)
+warning: `focus-waves` (bin "focus-waves" test) generated 41 warnings (41 duplicates)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.98s

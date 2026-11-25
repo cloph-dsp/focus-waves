@@ -79,9 +79,7 @@ pub fn generateSplaysort(ctx: &mut SortCtx, size: usize, loop_: bool) {
 
         let mut result: Vec<i64> = Vec::with_capacity(array.len());
         inorder(ctx, &nodes, root, &mut result, size, note_duration);
-        for i in 0..result.len() {
-            array[i] = result[i];
-        }
+        array[..result.len()].copy_from_slice(&result[..]);
 
         ctx.play_sorted(&array);
         if !loop_ || ctx.stopped() {

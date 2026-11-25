@@ -10,11 +10,10 @@ pub fn generateBinaryTreeSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
         let audio_delay = ctx.adaptive_delay(200.0, size);
 
         let mut result: Vec<i64> = Vec::with_capacity(array.len());
-        for i in 0..array.len() {
+        for &value in array.iter() {
             if ctx.stopped() {
                 return;
             }
-            let value = array[i];
             let mut pos = 0;
             for (j, existing) in result.iter().enumerate() {
                 if value > *existing {

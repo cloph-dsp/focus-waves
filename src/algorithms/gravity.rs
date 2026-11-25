@@ -26,8 +26,8 @@ pub fn generateGravitySort(ctx: &mut SortCtx, size: usize, loop_: bool) {
                 return;
             }
             let mut sum = 0usize;
-            for row in 0..array.len() {
-                if col < abacus[row].len() {
+            for row in &abacus {
+                if col < row.len() {
                     sum += 1;
                 }
             }

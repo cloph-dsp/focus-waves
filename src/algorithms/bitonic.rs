@@ -1,6 +1,8 @@
 use crate::audio::Wave;
 use crate::engine::SortCtx;
 
+// Explicit sonification/timing knobs; a struct would add noise at every call site.
+#[allow(clippy::too_many_arguments)]
 fn comp_and_swap(
     ctx: &mut SortCtx,
     arr: &mut [i64],
@@ -19,6 +21,8 @@ fn comp_and_swap(
     }
 }
 
+// Explicit sonification/timing knobs; a struct would add noise at every call site.
+#[allow(clippy::too_many_arguments)]
 fn bitonic_merge(
     ctx: &mut SortCtx,
     arr: &mut [i64],
@@ -43,6 +47,8 @@ fn bitonic_merge(
     bitonic_merge(ctx, arr, low + k, k, dir, size, note_duration, audio_delay);
 }
 
+// Explicit sonification/timing knobs; a struct would add noise at every call site.
+#[allow(clippy::too_many_arguments)]
 fn bitonic_sort(
     ctx: &mut SortCtx,
     arr: &mut [i64],

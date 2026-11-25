@@ -20,7 +20,7 @@ use crate::engine::SortCtx;
 | Rust | TypeScript |
 |---|---|
 | `ctx.stopped() -> bool` | `activeLoop.stop` |
-| `ctx.size`, `ctx.loop_` | `size`, `loop` |
+| `ctx.size`; the `loop_` function argument | `size`, `loop` |
 | `ctx.random_array(size) -> Vec<i64>` | `generateUniqueRandomArray(size)` |
 | `ctx.play(freq, dur, wave)` | `playTone(freq, dur, now, wave)` |
 | `ctx.play_after(offset, freq, dur, wave)` | `playTone(freq, dur, now + offset, wave)` |

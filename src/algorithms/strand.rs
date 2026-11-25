@@ -32,13 +32,13 @@ pub fn generateStrandSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
             let mut sublist = vec![input[0]];
             let mut remaining: Vec<i64> = Vec::new();
 
-            for i in 1..input.len() {
+            for &value in input.iter().skip(1) {
                 if ctx.stopped() {
                     return;
                 }
-                if input[i] >= sublist[sublist.len() - 1] {
-                    sublist.push(input[i]);
-                    ctx.play(ctx.freq(input[i] as f64, size as f64), note_duration, Wave::Sine);
+                if value >= sublist[sublist.len() - 1] {
+                    sublist.push(value);
+                    ctx.play(ctx.freq(value as f64, size as f64), note_duration, Wave::Sine);
                     let mut display = Vec::with_capacity(array.len());
                     display.extend_from_slice(&result);
                     display.extend_from_slice(&sublist);
@@ -47,7 +47,7 @@ pub fn generateStrandSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
                     ctx.visual(&display, &[result.len() + sublist.len() - 1]);
                     ctx.delay(ctx.adaptive_delay(200.0, size));
                 } else {
-                    remaining.push(input[i]);
+                    remaining.push(value);
                 }
             }
 
@@ -61,9 +61,8 @@ pub fn generateStrandSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
             ctx.delay(ctx.adaptive_delay(200.0, size));
         }
 
-        for i in 0..array.len() {
-            array[i] = result[i];
-        }
+        let n = array.len();
+        array[..n].copy_from_slice(&result[..n]);
 
         ctx.play_sorted(&array);
         if !loop_ || ctx.stopped() {

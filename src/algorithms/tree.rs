@@ -44,11 +44,10 @@ pub fn generateTreeSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
         let mut nodes: Vec<(i64, usize, usize)> = Vec::with_capacity(array.len());
         let mut root = NULL;
 
-        for i in 0..array.len() {
+        for &value in array.iter() {
             if ctx.stopped() {
                 return;
             }
-            let value = array[i];
             if root == NULL {
                 ctx.play(
                     ctx.freq(value as f64, size as f64),

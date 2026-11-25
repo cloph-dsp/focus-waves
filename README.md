@@ -1,6 +1,6 @@
 # Focus Waves (Rust)
 
-A native desktop sonification of ~100 sorting algorithms, ported from
+A native desktop sonification of 72 distinct sorting algorithms, ported from
 [cloph-dsp/focus-waves](https://github.com/cloph-dsp/focus-waves) to Rust.
 
 Each algorithm repeatedly shuffles an array, sorts it while playing a short tone for every
@@ -22,8 +22,11 @@ audio with `rodio`.
 - **Search / category** — filter the algorithm list (100 entries).
 - **Sample size** — 16…4096 values (default 64). Larger arrays automatically lower the
   volume and shorten notes.
-- **Play / Stop** — start or cancel the current run. Visualization shows up to 512 bars,
-  bucketed down from larger arrays; active indices are highlighted.
+- **Play / Stop / Shuffle** — start, cancel, or play one full pass of random algorithms in
+  sequence. Visualization shows up to 512 bars, bucketed down from larger arrays; active
+  indices are highlighted.
+- **Ambient** — toggle a quiet pink-noise bed underneath the sort tones (on by default),
+  for background listening. Pitches and timings are unchanged.
 
 ## Layout
 

@@ -1,6 +1,8 @@
 use crate::audio::Wave;
 use crate::engine::SortCtx;
 
+// Explicit sonification/timing knobs; a struct would add noise at every call site.
+#[allow(clippy::too_many_arguments)]
 fn merge3_way(
     ctx: &mut SortCtx,
     arr: &mut [i64],
@@ -100,6 +102,26 @@ fn sort3_way(
     audio_delay: u64,
 ) {
     if right - left < 2 || ctx.stopped() {
+        return;
+    }
+    // A two-element segment cannot be split into three non-empty runs.
+    if right - left == 2 {
+        if arr[left] > arr[left + 1] {
+            arr.swap(left, left + 1);
+            ctx.play(
+                ctx.freq(arr[left] as f64, size as f64),
+                note_duration,
+                Wave::Sine,
+            );
+            ctx.play_after(
+                note_duration / 2.0,
+                ctx.freq(arr[left + 1] as f64, size as f64),
+                note_duration,
+                Wave::Sine,
+            );
+            ctx.visual(arr, &[left, left + 1]);
+            ctx.delay(audio_delay);
+        }
         return;
     }
     let third = (right - left) / 3;

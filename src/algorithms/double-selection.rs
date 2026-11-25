@@ -11,7 +11,7 @@ pub fn generateDoubleSelectionSort(ctx: &mut SortCtx, size: usize, loop_: bool) 
         let swap_delay = ctx.adaptive_delay(55.0, size);
         let n = array.len();
 
-        for i in 0..((n + 1) / 2) {
+        for i in 0..n.div_ceil(2) {
             if ctx.stopped() {
                 return;
             }

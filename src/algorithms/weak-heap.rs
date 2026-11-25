@@ -7,7 +7,11 @@ fn weak_heapify(ctx: &mut SortCtx, array: &mut [i64], reverse: &mut [u8], i: usi
         if ctx.stopped() {
             return;
         }
-        let child = 2 * j + 1 + reverse[j] as usize;
+        let mut child = 2 * j + 1;
+        // The reverse bit selects the right child only when it exists.
+        if reverse[j] == 1 && child + 1 < n {
+            child += 1;
+        }
         if array[child] > array[j] {
             array.swap(j, child);
             reverse[j] = 1 - reverse[j];

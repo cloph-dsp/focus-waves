@@ -18,8 +18,8 @@ pub fn generateCycleSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
                 let mut item = array[cycle_start];
                 let mut pos = cycle_start;
 
-                for i in (cycle_start + 1)..n {
-                    if array[i] < item {
+                for &value in &array[cycle_start + 1..n] {
+                    if value < item {
                         pos += 1;
                     }
                 }
@@ -33,17 +33,15 @@ pub fn generateCycleSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
                     break;
                 }
 
-                let old = array[pos];
-                array[pos] = item;
-                item = old;
+                std::mem::swap(&mut array[pos], &mut item);
                 ctx.play(ctx.freq(array[pos] as f64, size as f64), note_duration, Wave::Sine);
                 ctx.visual(&array, &[cycle_start, pos]);
                 ctx.delay(audio_delay);
 
                 while pos != cycle_start && !ctx.stopped() {
                     pos = cycle_start;
-                    for i in (cycle_start + 1)..n {
-                        if array[i] < item {
+                    for &value in &array[cycle_start + 1..n] {
+                        if value < item {
                             pos += 1;
                         }
                     }
@@ -54,9 +52,7 @@ pub fn generateCycleSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
                         break;
                     }
 
-                    let old = array[pos];
-                    array[pos] = item;
-                    item = old;
+                    std::mem::swap(&mut array[pos], &mut item);
                     ctx.play(ctx.freq(array[pos] as f64, size as f64), note_duration, Wave::Sine);
                     ctx.visual(&array, &[pos]);
                     ctx.delay(audio_delay);

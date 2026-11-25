@@ -9,7 +9,7 @@ pub fn generateColumnsort(ctx: &mut SortCtx, size: usize, loop_: bool) {
         let note_duration = 0.02f32;
         let n = array.len();
         let r = (n as f64).sqrt().ceil() as usize;
-        let s = if r == 0 { 0 } else { (n + r - 1) / r };
+        let s = if r == 0 { 0 } else { n.div_ceil(r) };
 
         // Three column-sort passes (columnsort's standard r/s layout).
         for _ in 0..3 {
