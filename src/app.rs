@@ -38,6 +38,8 @@ pub struct FocusWavesApp {
     rx: mpsc::Receiver<VisualEvent>,
     values: Vec<i64>,
     highlights: Vec<usize>,
+    /// Slowly decaying per-bucket maxima for the channel-strip peak markers.
+    peaks: Vec<i64>,
     selected: usize,
     search: String,
     category: Option<String>,
@@ -73,6 +75,7 @@ impl FocusWavesApp {
             rx,
             values: seeded_values(64),
             highlights: Vec::new(),
+            peaks: Vec::new(),
             selected: 0,
             search: String::new(),
             category: None,
@@ -249,6 +252,16 @@ impl eframe::App for FocusWavesApp {
         let peak = bars.iter().copied().max().unwrap_or(0);
         let audio_online = self.audio.is_some();
 
+        // Decayed peak hold for the mixer strips, mirroring a REAPER meter's
+        // peak marker. Reset on bucket-count changes (e.g. a size change).
+        if self.peaks.len() != bars.len() {
+            self.peaks = bars.to_vec();
+        } else {
+            for (held, &value) in self.peaks.iter_mut().zip(bars.iter()) {
+                *held = ((*held as f32 * 0.985) as i64).max(value);
+            }
+        }
+
         ui.painter().rect_filled(ui.max_rect(), 0.0, BG);
 
         let pad = 12.0;
@@ -257,19 +270,15 @@ impl eframe::App for FocusWavesApp {
         let x0 = ui.cursor().min.x + pad;
         let mut y = ui.cursor().min.y + pad;
 
-        // ---- transport strip -------------------------------------------------
-        let transport_h = 54.0;
-        let transport_rect = Rect::from_min_size(egui::pos2(x0, y), vec2(full_width, transport_h));
-        let mut transport_ui = child_ui(ui, transport_rect, "transport");
-        panel_frame().show(&mut transport_ui, |ui| {
-            draw_transport(ui, self, loop_active, full_width);
-        });
-        y += transport_h + gap;
-
         // ---- main work area --------------------------------------------------
+        // The dock owns the lower third: transport row + mixer strips. The
+        // status footer stays pinned beneath it, like REAPER's status line.
         let footer_h = 26.0;
-        let bottom = ui.max_rect().max.y - pad - footer_h - gap;
-        let main_h = (bottom - y).max(260.0);
+        let transport_h = if full_width < 620.0 { 78.0 } else { 52.0 };
+        let strips_h = 200.0;
+        let dock_h = transport_h + gap + strips_h;
+        let bottom = ui.max_rect().max.y - pad - footer_h - gap - dock_h - gap;
+        let main_h = (bottom - y).max(200.0);
 
         if full_width >= 900.0 {
             let browser_w = 250.0;
@@ -330,6 +339,21 @@ impl eframe::App for FocusWavesApp {
             }
         }
         y += main_h + gap;
+
+        // ---- bottom transport dock -------------------------------------------
+        let transport_rect = Rect::from_min_size(egui::pos2(x0, y), vec2(full_width, transport_h));
+        let mut transport_ui = child_ui(ui, transport_rect, "dock-transport");
+        panel_frame().show(&mut transport_ui, |ui| {
+            draw_transport(ui, self, loop_active, full_width);
+        });
+        y += transport_h + gap;
+
+        let strips_rect = Rect::from_min_size(egui::pos2(x0, y), vec2(full_width, strips_h));
+        let mut strips_ui = child_ui(ui, strips_rect, "dock-strips");
+        panel_frame().show(&mut strips_ui, |ui| {
+            draw_channel_strips(ui, self, &bars, &lit, peak);
+        });
+        y += strips_h + gap;
 
         // ---- status footer ---------------------------------------------------
         let footer_rect = Rect::from_min_size(egui::pos2(x0, y), vec2(full_width, footer_h));
@@ -464,49 +488,62 @@ fn square_button(label: &str, active: bool, enabled: bool, width: f32) -> egui::
 // ---------------------------------------------------------------------------
 
 fn draw_transport(ui: &mut Ui, app: &mut FocusWavesApp, loop_active: bool, width: f32) {
+    let compact = width < 620.0;
     ui.spacing_mut().item_spacing = vec2(8.0, 0.0);
-    ui.horizontal(|ui| {
-        ui.vertical(|ui| {
-            ui.spacing_mut().item_spacing.y = 0.0;
-            ui.horizontal(|ui| {
-                ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
-                ui.label(RichText::new("FOCUS").size(13.0).strong().color(TEXT));
-                ui.label(RichText::new("WAVES").size(13.0).strong().color(ACCENT));
+    // Wrapping keeps the dock inside the window when it gets narrow.
+    ui.horizontal_wrapped(|ui| {
+        ui.spacing_mut().item_spacing = vec2(8.0, 0.0);
+
+        if width >= 700.0 {
+            ui.vertical(|ui| {
+                ui.spacing_mut().item_spacing.y = 0.0;
+                ui.horizontal(|ui| {
+                    ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+                    ui.label(RichText::new("FOCUS").size(12.0).strong().color(TEXT));
+                    ui.label(RichText::new("WAVES").size(12.0).strong().color(ACCENT));
+                });
+                ui.label(RichText::new("SORTING SONIFICATION").size(8.0).color(FAINT));
             });
-            ui.label(RichText::new("SORTING SONIFICATION").size(9.0).color(FAINT));
-        });
-        vrule(ui, 28.0);
-
-        let play = square_button("PLAY", loop_active, app.runner.is_some(), 74.0);
-        let shuffle = square_button("SHUFFLE", app.shuffle, app.runner.is_some(), 82.0);
-        let playing = app.runner.as_mut().is_some_and(|runner| runner.is_playing());
-        let running = playing || app.shuffle;
-        let stop = if running {
-            egui::Button::new(RichText::new("STOP").size(11.0).strong().color(WARN))
-                .fill(PANEL_RAISED)
-                .stroke(Stroke::new(1.0, WARN.gamma_multiply(0.6)))
-                .min_size(vec2(62.0, 24.0))
-                .corner_radius(2.0)
-        } else {
-            square_button("STOP", false, false, 62.0)
-        };
-
-        if ui.add_enabled(app.runner.is_some(), play).clicked() {
-            app.toggle_playback();
+            vrule(ui, 26.0);
         }
-        if ui.add_enabled(app.runner.is_some(), shuffle).clicked() {
-            if app.shuffle {
-                app.stop_playback();
+
+        // Segmented cluster: flush buttons with hairline borders between them.
+        ui.horizontal(|ui| {
+            ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+            let play_w = if compact { 56.0 } else { 68.0 };
+            let shuffle_w = if compact { 64.0 } else { 76.0 };
+            let stop_w = if compact { 52.0 } else { 58.0 };
+            let play = square_button("PLAY", loop_active, app.runner.is_some(), play_w);
+            let shuffle = square_button("SHUFFLE", app.shuffle, app.runner.is_some(), shuffle_w);
+            let playing = app.runner.as_mut().is_some_and(|runner| runner.is_playing());
+            let running = playing || app.shuffle;
+            let stop = if running {
+                egui::Button::new(RichText::new("STOP").size(11.0).strong().color(WARN))
+                    .fill(PANEL_RAISED)
+                    .stroke(Stroke::new(1.0, WARN.gamma_multiply(0.6)))
+                    .min_size(vec2(stop_w, 24.0))
+                    .corner_radius(2.0)
             } else {
-                app.start_shuffle();
+                square_button("STOP", false, false, stop_w)
+            };
+            if ui.add_enabled(app.runner.is_some(), play).clicked() {
+                app.toggle_playback();
             }
-        }
-        if ui.add_enabled(running, stop).clicked() {
-            app.stop_playback();
-        }
+            if ui.add_enabled(app.runner.is_some(), shuffle).clicked() {
+                if app.shuffle {
+                    app.stop_playback();
+                } else {
+                    app.start_shuffle();
+                }
+            }
+            if ui.add_enabled(running, stop).clicked() {
+                app.stop_playback();
+            }
+        });
 
-        ui.add_space(6.0);
-        let ambient = square_button("AMBIENT", app.ambient, app.runner.is_some(), 72.0);
+        ui.add_space(4.0);
+        let ambient_w = if compact { 62.0 } else { 68.0 };
+        let ambient = square_button("AMBIENT", app.ambient, app.runner.is_some(), ambient_w);
         if ui.add_enabled(app.runner.is_some(), ambient).clicked() {
             app.ambient = !app.ambient;
             if let Some(a) = app.audio.as_ref() {
@@ -514,7 +551,7 @@ fn draw_transport(ui: &mut Ui, app: &mut FocusWavesApp, loop_active: bool, width
             }
         }
 
-        vrule(ui, 28.0);
+        vrule(ui, 26.0);
 
         // Readout uses post-click state so the current frame is already accurate.
         let playing_now = app.runner.as_mut().is_some_and(|runner| runner.is_playing());
@@ -527,23 +564,141 @@ fn draw_transport(ui: &mut Ui, app: &mut FocusWavesApp, loop_active: bool, width
         } else {
             ("IDLE", FAINT)
         };
-        ui.label(RichText::new("ALG").size(9.0).strong().color(FAINT));
-        ui.label(RichText::new(alg.name).size(12.0).strong().color(TEXT));
-        if width >= 760.0 {
-            ui.add_space(8.0);
-            ui.label(RichText::new("N").size(9.0).strong().color(FAINT));
-            ui.label(
-                RichText::new(app.size.to_string())
-                    .size(12.0)
-                    .color(TEXT)
-                    .font(FontId::monospace(12.0)),
-            );
-            ui.add_space(8.0);
+        if width >= 480.0 {
+            ui.label(RichText::new("ALG").size(9.0).strong().color(FAINT));
+            ui.label(RichText::new(alg.name).size(11.0).strong().color(TEXT));
+            if width >= 760.0 {
+                ui.add_space(6.0);
+                ui.label(RichText::new("N").size(9.0).strong().color(FAINT));
+                ui.label(
+                    RichText::new(app.size.to_string())
+                        .size(11.0)
+                        .color(TEXT)
+                        .font(FontId::monospace(11.0)),
+                );
+            }
+            ui.add_space(6.0);
         }
-        ui.add_space(8.0);
         ui.label(RichText::new("STATE").size(9.0).strong().color(FAINT));
         ui.label(RichText::new(state).size(10.0).strong().color(state_color));
     });
+}
+
+// ---------------------------------------------------------------------------
+// Channel strips (mixer)
+// ---------------------------------------------------------------------------
+
+/// One narrow vertical strip per bar bucket: level, decaying peak hold and a
+/// live value readout. Lit buckets turn teal so the strips react to the sort.
+fn draw_channel_strips(ui: &mut Ui, app: &FocusWavesApp, bars: &[i64], lit: &[usize], peak: i64) {
+    panel_header(
+        ui,
+        "CHANNEL STRIPS",
+        &format!("{} CH  ·  PEAK {}", bars.len(), peak),
+    );
+
+    let lit_set: std::collections::HashSet<usize> = lit.iter().copied().collect();
+    let scale = peak.max(1) as f32;
+    let strip_w = 26.0;
+    // The header above consumed its 18px; the frame supplies the outer margin.
+    let strip_h = (ui.available_height() - 4.0).max(72.0);
+
+    egui::ScrollArea::horizontal()
+        .auto_shrink(false)
+        .show(ui, |ui| {
+            ui.spacing_mut().item_spacing = vec2(0.0, 0.0);
+            ui.horizontal(|ui| {
+                for (index, &value) in bars.iter().enumerate() {
+                    let active = lit_set.contains(&index);
+                    let held = app.peaks.get(index).copied().unwrap_or(value);
+                    let (rect, _) = ui.allocate_exact_size(vec2(strip_w, strip_h), Sense::hover());
+                    let p = ui.painter();
+
+                    p.rect_filled(rect, 0.0, if active { PANEL_RAISED } else { PANEL });
+                    if active {
+                        p.rect_filled(
+                            Rect::from_min_size(rect.min, vec2(2.0, rect.height())),
+                            0.0,
+                            ACCENT,
+                        );
+                    }
+
+                    // Strip number and hairline, like a mixer track header.
+                    p.text(
+                        egui::pos2(rect.min.x + 4.0, rect.min.y + 8.0),
+                        Align2::LEFT_CENTER,
+                        format!("{:02}", index + 1),
+                        FontId::monospace(8.0),
+                        if active { ACCENT_LIGHT } else { FAINT },
+                    );
+                    p.rect_filled(
+                        Rect::from_min_size(
+                            egui::pos2(rect.min.x, rect.min.y + 15.0),
+                            vec2(rect.width(), 1.0),
+                        ),
+                        0.0,
+                        BORDER,
+                    );
+
+                    // Level well, fader cap and decaying peak-hold tick.
+                    let meter = Rect::from_min_max(
+                        egui::pos2(rect.min.x + 6.0, rect.min.y + 19.0),
+                        egui::pos2(rect.max.x - 6.0, rect.max.y - 15.0),
+                    );
+                    if meter.width() > 2.0 && meter.height() > 2.0 {
+                        p.rect_filled(meter, 0.0, CHART_BG);
+                        let fill_h =
+                            (meter.height() * (value as f32 / scale).clamp(0.0, 1.0)).max(1.0);
+                        let cap_y = meter.max.y - fill_h;
+                        p.rect_filled(
+                            Rect::from_min_max(
+                                egui::pos2(meter.min.x, cap_y),
+                                egui::pos2(meter.max.x, meter.max.y),
+                            ),
+                            0.0,
+                            if active { ACCENT } else { BAR },
+                        );
+                        p.rect_filled(
+                            Rect::from_min_max(
+                                egui::pos2(meter.min.x - 2.0, cap_y - 1.0),
+                                egui::pos2(meter.max.x + 2.0, cap_y + 1.0),
+                            ),
+                            0.0,
+                            if active { ACCENT_LIGHT } else { MUTED },
+                        );
+                        let hold_y =
+                            meter.max.y - meter.height() * (held as f32 / scale).clamp(0.0, 1.0);
+                        p.rect_filled(
+                            Rect::from_min_size(
+                                egui::pos2(meter.min.x - 1.0, hold_y),
+                                vec2(meter.width() + 2.0, 1.0),
+                            ),
+                            0.0,
+                            WARN,
+                        );
+                    }
+
+                    // Live value readout.
+                    p.text(
+                        egui::pos2(rect.center().x, rect.max.y - 7.0),
+                        Align2::CENTER_CENTER,
+                        value.to_string(),
+                        FontId::monospace(8.0),
+                        if active { ACCENT_LIGHT } else { MUTED },
+                    );
+
+                    // Hairline separator between channels.
+                    p.rect_filled(
+                        Rect::from_min_size(
+                            egui::pos2(rect.max.x - 1.0, rect.min.y),
+                            vec2(1.0, rect.height()),
+                        ),
+                        0.0,
+                        GRID,
+                    );
+                }
+            });
+        });
 }
 
 // ---------------------------------------------------------------------------

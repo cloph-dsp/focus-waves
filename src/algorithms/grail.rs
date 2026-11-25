@@ -2,19 +2,19 @@ use crate::audio::Wave;
 use crate::engine::SortCtx;
 
 // Ported from TypeScript: src/utils/audio/algorithms/grail.ts
-fn rotate(ctx: &mut SortCtx, arr: &mut [i64], start: usize, mid: usize, end: usize, size: usize) {
-    let mut start = start;
-    let mut mid = mid;
-    while start < mid && mid < end {
+fn rotate(ctx: &mut SortCtx, arr: &mut [i64], start: usize, mid: usize, _end: usize, size: usize) {
+    // Right-rotate [start..=mid] by one, bubbling arr[mid] down to `start`.
+    // This is the in-place rotate step of Grail's merge.
+    let mut k = mid;
+    while k > start {
         if ctx.stopped() {
             return;
         }
-        arr.swap(start, mid);
-        ctx.play(ctx.freq(arr[start] as f64, size as f64), 0.02, Wave::Sine);
-        ctx.visual(arr, &[start, mid]);
+        arr.swap(k - 1, k);
+        ctx.play(ctx.freq(arr[k - 1] as f64, size as f64), 0.02, Wave::Sine);
+        ctx.visual(arr, &[k - 1, k]);
         ctx.delay(ctx.adaptive_delay(40.0, size));
-        start += 1;
-        mid += 1;
+        k -= 1;
     }
 }
 

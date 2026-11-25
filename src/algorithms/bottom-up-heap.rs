@@ -10,26 +10,38 @@ pub fn generateBottomUpHeapSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
         let audio_delay = ctx.adaptive_delay(200.0, size);
         let n = array.len();
 
-        // Build heap from bottom.
-        for idx in (0..n).rev() {
-            if ctx.stopped() {
-                return;
-            }
-            let mut current = idx;
-            while current > 0 && !ctx.stopped() {
-                let parent = (current - 1) / 2;
-                if array[current] > array[parent] {
-                    array.swap(current, parent);
+        // Build heap from bottom (Floyd sift-down from the last parent).
+        if n > 1 {
+            for idx in (0..=n / 2 - 1).rev() {
+                if ctx.stopped() {
+                    return;
+                }
+                let mut current = idx;
+                loop {
+                    if ctx.stopped() {
+                        return;
+                    }
+                    let left = 2 * current + 1;
+                    let right = 2 * current + 2;
+                    let mut largest = current;
+                    if left < n && array[left] > array[largest] {
+                        largest = left;
+                    }
+                    if right < n && array[right] > array[largest] {
+                        largest = right;
+                    }
+                    if largest == current {
+                        break;
+                    }
+                    array.swap(current, largest);
                     ctx.play(
                         ctx.freq(array[current] as f64, size as f64),
                         note_duration,
                         Wave::Sine,
                     );
-                    ctx.visual(&array, &[current, parent]);
+                    ctx.visual(&array, &[current, largest]);
                     ctx.delay(audio_delay);
-                    current = parent;
-                } else {
-                    break;
+                    current = largest;
                 }
             }
         }

@@ -67,6 +67,9 @@ pub fn generateOscillatingMergeSort(ctx: &mut SortCtx, size: usize, loop_: bool)
                 temp.push(arr[j as usize]);
                 j -= 1;
             }
+            // Backward merge collects values from largest to smallest; flip so
+            // the segment is written back in ascending order.
+            temp.reverse();
         }
 
         for k in 0..temp.len() {

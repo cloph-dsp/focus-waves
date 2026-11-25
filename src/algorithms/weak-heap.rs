@@ -7,10 +7,14 @@ fn weak_heapify(ctx: &mut SortCtx, array: &mut [i64], reverse: &mut [u8], i: usi
         if ctx.stopped() {
             return;
         }
-        let mut child = 2 * j + 1;
-        // The reverse bit selects the right child only when it exists.
-        if reverse[j] == 1 && child + 1 < n {
-            child += 1;
+        let left = 2 * j + 1;
+        let right = left + 1;
+        // Sift toward the larger child; the reverse bit keeps the weak-heap tie-break.
+        let mut child = left;
+        if right < n && (array[right] > array[left]
+            || (array[right] == array[left] && reverse[j] == 1))
+        {
+            child = right;
         }
         if array[child] > array[j] {
             array.swap(j, child);
@@ -32,11 +36,14 @@ pub fn generateWeakHeapSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
 
         if n > 0 {
             let mut i = n - 1;
-            while i > 0 {
+            loop {
                 if ctx.stopped() {
                     return;
                 }
                 weak_heapify(ctx, &mut array, &mut reverse, i, n);
+                if i == 0 {
+                    break;
+                }
                 i -= 1;
             }
 

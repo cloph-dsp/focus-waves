@@ -1,0 +1,9 @@
+cargo :     Checking focus-waves v0.1.0 
+(C:\Users\pedro\.config\openchamber\chats\2026-11-25\session-188c9be4-d2bf-418d-b3de-f77a2a874b78)
+At line:9 char:31
++ ... Log 'final_clippy2.txt' { cargo clippy --all-targets -- -D warnings }
++                               ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (    Checking fo...e-f77a2a874b78):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.73s

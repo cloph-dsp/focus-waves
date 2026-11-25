@@ -8,46 +8,41 @@ pub fn generateGravitySort(ctx: &mut SortCtx, size: usize, loop_: bool) {
         let mut array = ctx.random_array(size);
         let note_duration = ctx.adaptive_duration(0.0085, size);
         let audio_delay = ctx.adaptive_delay(40.0, size);
-        let max = array.iter().copied().max().unwrap_or(0);
+        let max = array.iter().copied().max().unwrap_or(0) as usize;
         let mut abacus: Vec<Vec<i64>> = Vec::with_capacity(array.len());
 
         for i in 0..array.len() {
             if ctx.stopped() {
                 return;
             }
-            abacus.push(vec![1; array[i] as usize]);
+            let mut row = vec![0i64; max];
+            for bead in row.iter_mut().take(array[i] as usize) {
+                *bead = 1;
+            }
+            abacus.push(row);
             ctx.play(ctx.freq(array[i] as f64, size as f64), note_duration, Wave::Sine);
             ctx.visual(&array, &[i]);
             ctx.delay(audio_delay);
         }
 
-        for col in 0..(max as usize) {
+        for col in 0..max {
             if ctx.stopped() {
                 return;
             }
-            let mut sum = 0usize;
-            for row in &abacus {
-                if col < row.len() {
-                    sum += 1;
-                }
+            let count = abacus.iter().filter(|row| row[col] == 1).count();
+            let split = array.len() - count;
+            for (idx, row) in abacus.iter_mut().enumerate() {
+                row[col] = if idx >= split { 1 } else { 0 };
             }
-            let mut count = sum;
-            let mut row = array.len();
-            while count > 0 && !ctx.stopped() {
-                row -= 1;
-                while abacus[row].len() <= col {
-                    abacus[row].push(0);
-                }
-                abacus[row][col] = 1;
-                count -= 1;
-            }
+            ctx.play(ctx.freq(count as f64, size as f64), note_duration, Wave::Sine);
+            ctx.delay(audio_delay);
         }
 
         for i in 0..array.len() {
             if ctx.stopped() {
                 return;
             }
-            array[i] = abacus[i].iter().filter(|&&x| x == 1).count() as i64;
+            array[i] = abacus[i].iter().sum();
             ctx.play(ctx.freq(array[i] as f64, size as f64), note_duration, Wave::Sine);
             ctx.visual(&array, &[i]);
             ctx.delay(audio_delay);

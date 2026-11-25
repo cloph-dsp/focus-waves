@@ -1,10 +1,11 @@
 use crate::algorithms;
 use crate::audio::{Audio, Wave};
 use rand::RngExt;
+use std::cell::Cell;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{mpsc, Arc};
 use std::thread::{self, JoinHandle};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 
 /// One visual frame sent from the sorting thread to the UI thread.
 pub struct VisualEvent {
@@ -20,6 +21,7 @@ pub struct SortCtx {
     audio: Arc<Audio>,
     visual_tx: mpsc::Sender<VisualEvent>,
     gain_scalar: f32,
+    last_visual: Cell<Instant>,
 }
 
 impl SortCtx {
@@ -35,6 +37,7 @@ impl SortCtx {
             audio,
             visual_tx,
             gain_scalar: 1.0,
+            last_visual: Cell::new(Instant::now() - Duration::from_millis(16)),
         };
         ctx.configure(size);
         ctx
@@ -107,7 +110,14 @@ impl SortCtx {
     }
 
     /// `nonBlockingCallback([...array], [indices])`.
+    /// shortcut: capped at 60 frames/s, so intermediate events are dropped;
+    /// upgrade to a reusable buffer pool if per-frame cloning shows up in a profile.
     pub fn visual(&self, array: &[i64], highlights: &[usize]) {
+        let now = Instant::now();
+        if now.duration_since(self.last_visual.get()) < Duration::from_millis(16) {
+            return;
+        }
+        self.last_visual.set(now);
         let _ = self.visual_tx.send(VisualEvent {
             values: array.to_vec(),
             highlights: highlights.to_vec(),

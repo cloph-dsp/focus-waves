@@ -8,7 +8,7 @@ struct Node {
 }
 
 fn insert(nodes: &mut Vec<Node>, root: Option<usize>, value: i64) -> usize {
-    let mut current = match root {
+    let root_id = match root {
         Some(id) => id,
         None => {
             let id = nodes.len();
@@ -16,6 +16,7 @@ fn insert(nodes: &mut Vec<Node>, root: Option<usize>, value: i64) -> usize {
             return id;
         }
     };
+    let mut current = root_id;
     loop {
         let go_left = value < nodes[current].value;
         let next = if go_left { nodes[current].left } else { nodes[current].right };
@@ -29,7 +30,7 @@ fn insert(nodes: &mut Vec<Node>, root: Option<usize>, value: i64) -> usize {
                 } else {
                     nodes[current].right = Some(id);
                 }
-                return id;
+                return root_id;
             }
         }
     }

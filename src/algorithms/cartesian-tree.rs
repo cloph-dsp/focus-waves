@@ -1,8 +1,9 @@
 use crate::audio::Wave;
 use crate::engine::SortCtx;
 
-/// Cartesian tree inorder: root is the minimum of the slice, recurse left, emit root, recurse right.
-/// Combining buildTree + inorder avoids materializing nodes while keeping the same sonification order.
+/// Emit the current Cartesian-tree root (the minimum of the slice), then recurse on
+/// the remaining nodes. A plain inorder walk rebuilds the original array, so the
+/// root must be extracted — and sonified — in ascending order instead.
 fn inorder(
     ctx: &SortCtx,
     arr: &[i64],
@@ -20,19 +21,21 @@ fn inorder(
         .map(|(i, _)| i)
         .unwrap();
 
-    inorder(ctx, &arr[..min_pos], result, note_duration, size);
-    if ctx.stopped() {
-        return;
-    }
     let value = arr[min_pos];
     result.push(value);
     ctx.play(ctx.freq(value as f64, size as f64), note_duration, Wave::Sine);
     ctx.visual(result, &[result.len() - 1]);
     ctx.delay(ctx.adaptive_delay(200.0, size));
-    inorder(ctx, &arr[min_pos + 1..], result, note_duration, size);
+
+    let mut rest = Vec::with_capacity(arr.len() - 1);
+    rest.extend_from_slice(&arr[..min_pos]);
+    rest.extend_from_slice(&arr[min_pos + 1..]);
+    inorder(ctx, &rest, result, note_duration, size);
 }
 
 // Ported from TypeScript: src/utils/audio/algorithms/cartesian-tree.ts
+// Deviation: inorder traversal of a Cartesian tree returns the original order; this
+// uses repeated root extraction (the actual Cartesian-tree sort) for ascending output.
 #[allow(non_snake_case)]
 pub fn generateCartesianTreeSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
     while !ctx.stopped() {

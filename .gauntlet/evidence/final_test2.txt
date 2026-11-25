@@ -1,0 +1,20 @@
+cargo :    Compiling focus-waves v0.1.0 
+(C:\Users\pedro\.config\openchamber\chats\2026-11-25\session-188c9be4-d2bf-418d-b3de-f77a2a874b78)
+At line:10 char:29
++ Run-Log 'final_test2.txt' { cargo test }
++                             ~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling fo...e-f77a2a874b78):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.83s
+     Running unittests src\main.rs 
+(target\debug\build\focus-waves/02b858232451da02\out\focus_waves-02b858232451da02.exe)
+
+running 4 tests
+test engine::cancellation_bench::cancellation_latency ... ignored, requires an audio device; measures join latency for every algorithm
+test app::tests::accent_uses_first_gradient_stop_and_falls_back ... ok
+test app::tests::shuffle_index_stays_in_range_and_avoids_repeat ... ok
+test app::tests::snapshot_buckets_and_maps_highlights ... ok
+
+test result: ok. 3 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

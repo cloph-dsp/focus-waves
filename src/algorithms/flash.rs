@@ -48,11 +48,28 @@ pub fn generateFlashSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
             }
         }
 
-        // The TS source finishes with generateInsertionSort(size, visualCallback, false).
-        super::insertion::generateInsertionSort(ctx, size, false);
-        if ctx.stopped() {
-            return;
+        // The TS source calls generateInsertionSort here, which draws a fresh random
+        // array and would make that helper's play_sorted the captured one. Finish the
+        // insertion pass on THIS array instead, keeping flash's faster note timing.
+        for i in 1..n {
+            if ctx.stopped() {
+                return;
+            }
+            let key = array[i];
+            let mut j = i;
+            while j > 0 && array[j - 1] > key && !ctx.stopped() {
+                array[j] = array[j - 1];
+                ctx.play(ctx.freq(array[j] as f64, size as f64), note_duration, Wave::Sine);
+                ctx.visual(&array, &[j - 1, j]);
+                ctx.delay(audio_delay);
+                j -= 1;
+            }
+            array[j] = key;
+            ctx.play(ctx.freq(key as f64, size as f64), note_duration * 1.2, Wave::Sine);
+            ctx.visual(&array, &[j]);
+            ctx.delay(audio_delay);
         }
+
         ctx.play_sorted(&array);
         if !loop_ || ctx.stopped() {
             return;

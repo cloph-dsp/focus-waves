@@ -1,0 +1,9 @@
+cargo :    Compiling focus-waves v0.1.0 
+(C:\Users\pedro\.config\openchamber\chats\2026-11-25\session-188c9be4-d2bf-418d-b3de-f77a2a874b78)
+At line:11 char:30
++ Run-Log 'final_build2.txt' { cargo build --release }
++                              ~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (   Compiling fo...e-f77a2a874b78):String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+    Finished `release` profile [optimized] target(s) in 4.57s

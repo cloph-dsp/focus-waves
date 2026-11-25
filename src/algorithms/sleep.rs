@@ -8,25 +8,22 @@ pub fn generateSleepSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
         let mut array = ctx.random_array(size);
         let note_duration = ctx.adaptive_duration(0.0085, size);
 
-        // Timers fire in ascending value order; replay that schedule without spawning threads.
-        let mut result = array.clone();
-        result.sort_unstable();
+        // Values are 1..=size, so timers fire in ascending value order. As each
+        // timer fires, move that value into the next output slot and sonify it.
         let mut previous = 0i64;
-        for &value in &result {
+        for out in 0..array.len() {
             if ctx.stopped() {
                 return;
             }
+            let value = (out + 1) as i64;
             ctx.delay(((value - previous) * 5).max(0) as u64);
-            ctx.play(ctx.freq(value as f64, size as f64), note_duration, Wave::Sine);
             previous = value;
-        }
 
-        for i in 0..result.len() {
-            if ctx.stopped() {
-                return;
+            if let Some(found) = (out..array.len()).find(|&i| array[i] == value) {
+                array.swap(out, found);
             }
-            array[i] = result[i];
-            ctx.visual(&array, &[i]);
+            ctx.play(ctx.freq(value as f64, size as f64), note_duration, Wave::Sine);
+            ctx.visual(&array, &[out]);
             ctx.delay(ctx.adaptive_delay(35.0, size));
         }
 

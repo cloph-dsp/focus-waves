@@ -61,7 +61,27 @@ pub fn generateBogobogoSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
         bogobogo_sort(ctx, &mut array, n, &mut attempts, note_duration, size);
 
         if attempts >= MAX_ATTEMPTS {
-            array.sort_unstable();
+            // Sonified insertion fallback: every reorder emits a tone.
+            for i in 1..array.len() {
+                if ctx.stopped() {
+                    return;
+                }
+                let mut j = i;
+                while j > 0 && array[j - 1] > array[j] {
+                    if ctx.stopped() {
+                        return;
+                    }
+                    array.swap(j - 1, j);
+                    ctx.play(
+                        ctx.freq(array[j] as f64, size as f64),
+                        note_duration,
+                        Wave::Sine,
+                    );
+                    ctx.visual(&array, &[j - 1, j]);
+                    ctx.delay(ctx.adaptive_delay(40.0, size));
+                    j -= 1;
+                }
+            }
         }
 
         ctx.play_sorted(&array);

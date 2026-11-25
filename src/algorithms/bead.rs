@@ -22,6 +22,7 @@ pub fn generateBeadSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
             if ctx.stopped() {
                 return;
             }
+            // Gravity: every bead in column j falls to the bottom of that column.
             let mut sum = 0usize;
             for row in beads.iter_mut() {
                 if j < row.len() && row[j] {
@@ -33,13 +34,12 @@ pub fn generateBeadSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
             }
 
             let start = array.len().saturating_sub(sum);
-            for i in start..array.len() {
+            for (i, column) in beads.iter_mut().enumerate().take(array.len()).skip(start) {
                 if ctx.stopped() {
                     return;
                 }
-                beads[i][j] = true;
-                let current_value = beads[i].iter().filter(|&&bead| bead).count() as i64;
-                array[i] = current_value;
+                column[j] = true;
+                let current_value = column.iter().filter(|&&bead| bead).count() as i64;
                 ctx.play(
                     ctx.freq((current_value.max(1)) as f64, size as f64),
                     note_duration,
@@ -48,6 +48,22 @@ pub fn generateBeadSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
                 ctx.visual(&array, &[i]);
                 ctx.delay(audio_delay);
             }
+        }
+
+        // A row's value is the number of beads it holds once gravity has settled.
+        for i in 0..array.len() {
+            if ctx.stopped() {
+                return;
+            }
+            let current_value = beads[i].iter().filter(|&&bead| bead).count() as i64;
+            array[i] = current_value;
+            ctx.play(
+                ctx.freq((current_value.max(1)) as f64, size as f64),
+                note_duration,
+                Wave::Sine,
+            );
+            ctx.visual(&array, &[i]);
+            ctx.delay(audio_delay);
         }
 
         ctx.play_sorted(&array);

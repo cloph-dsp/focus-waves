@@ -1,0 +1,9 @@
+﻿
+running 4 tests
+test engine::cancellation_bench::cancellation_latency ... ignored, requires an audio device; measures join latency for every algorithm
+test app::tests::accent_uses_first_gradient_stop_and_falls_back ... ok
+test app::tests::snapshot_buckets_and_maps_highlights ... ok
+test app::tests::shuffle_index_stays_in_range_and_avoids_repeat ... ok
+
+test result: ok. 3 passed; 0 failed; 1 ignored; 0 measured; 0 filtered out; finished in 0.00s
+

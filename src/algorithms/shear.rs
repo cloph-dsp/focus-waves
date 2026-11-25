@@ -35,11 +35,37 @@ pub fn generateShearSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
             }
         }
 
+        // Shear's alternating row order leaves a snake-shaped matrix; a final
+        // linear insertion pass folds it into one globally ascending sequence.
+        finish_linear(ctx, &mut array, size, audio_delay);
+        if ctx.stopped() {
+            return;
+        }
+
         ctx.play_sorted(&array);
         if !loop_ || ctx.stopped() {
             return;
         }
         ctx.delay(ctx.adaptive_delay(200.0, size));
+    }
+}
+
+fn finish_linear(ctx: &mut SortCtx, arr: &mut [i64], size: usize, audio_delay: u64) {
+    for i in 1..arr.len() {
+        if ctx.stopped() {
+            return;
+        }
+        let mut j = i;
+        while j > 0 && arr[j] < arr[j - 1] {
+            if ctx.stopped() {
+                return;
+            }
+            arr.swap(j, j - 1);
+            ctx.play(ctx.freq(arr[j] as f64, size as f64), 0.02, Wave::Sine);
+            ctx.visual(arr, &[j, j - 1]);
+            ctx.delay(audio_delay);
+            j -= 1;
+        }
     }
 }
 

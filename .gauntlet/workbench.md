@@ -10,7 +10,7 @@
 - **Workstreams**: (1) shell/layout + palette, (2) visualizer rendering, (3) transport + interaction feedback.
 - **Critic**: fresh-context `oracle`, sees only goal, bar, constraints, and the two images — never the builder's rationale. Verdict must be PASS/FAIL with inspected evidence, largest gap, next target.
 - **Envelope**: at most 3 builder→critic waves; stop earlier on PASS or two waves with no material improvement.
-- **Status**: PASS at wave 1 by independent fresh-context oracle (`ses_dec2417d0ffeo9VVr5a7BRGsou`), blind A/B: A = wave 1 rebuild (`wave1_A.png`), B = baseline (`wave1_B.png`). A judged clearly closer to REAPER 7 (three-panel workstation, dense browser/inspector/status, restrained teal accent) than B (sparse single-column dashboard). Remaining gap: no lower-third transport + channel-strip zone. Loop A stops on PASS.
+- **Status**: PASS at wave 1 by independent fresh-context oracle (`ses_dec2417d0ffeo9VVr5a7BRGsou`), blind A/B: A = wave 1 rebuild (`wave1_A.png`), B = baseline (`wave1_B.png`). A judged clearly closer to REAPER 7 (three-panel workstation, dense browser/inspector/status, restrained teal accent) than B (sparse single-column dashboard). Remaining gap: no lower-third transport + channel-strip zone. Follow-up wave 2 (user-requested) closed that gap: bottom transport dock + 64-strip channel mixer (`wave2_A.png`), **PASS** from blind oracle `ses_dec010e9fffe1zEo7wmWwYrXgg` vs `wave1_A.png`. Remaining gap: minimal faders without knobs/EQ/FX or bright green meters; center is one monolithic chart rather than multi-track waveforms. Loop A stops on PASS.
 
 ## Loop B — Rust-native advantage
 

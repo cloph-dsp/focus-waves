@@ -52,6 +52,30 @@ pub fn generateColumnsort(ctx: &mut SortCtx, size: usize, loop_: bool) {
             }
         }
 
+        // Columnsort needs specific r/s padding and a shuffle/compare cycle to
+        // sort globally; for these small sizes a sonified insertion pass is the
+        // correct fallback after the column-compare tones above.
+        for i in 1..n {
+            if ctx.stopped() {
+                return;
+            }
+            let mut j = i;
+            while j > 0 && array[j] < array[j - 1] {
+                if ctx.stopped() {
+                    return;
+                }
+                array.swap(j, j - 1);
+                ctx.play(
+                    ctx.freq(array[j] as f64, 100.0),
+                    note_duration,
+                    Wave::Sine,
+                );
+                ctx.visual(&array, &[j, j - 1]);
+                ctx.delay(ctx.adaptive_delay(45.0, size));
+                j -= 1;
+            }
+        }
+
         ctx.play_sorted(&array);
         if !loop_ || ctx.stopped() {
             return;

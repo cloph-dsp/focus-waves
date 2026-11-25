@@ -1,0 +1,8 @@
+=== full_run_check ===
+algorithms: 72
+cases:      1800 (sizes 1,2,3,5,8 x seeds 1,7,42,1234,99991, loop_=false)
+PASS cases: 1800/1800
+ALGORITHMS OK: 72/72
+FAIL (unsorted final array): 0
+NO_FINAL_ARRAY (no play_sorted call): 0
+TIMEOUT: 0

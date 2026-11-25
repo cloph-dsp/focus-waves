@@ -28,6 +28,21 @@ pub fn generateCubeSort(ctx: &mut SortCtx, size: usize, loop_: bool) {
             }
         }
 
+        // Block-local order alone is not global order; finish with a full pass.
+        for i in 1..array.len() {
+            let mut j = i;
+            while j > 0 && array[j - 1] > array[j] {
+                if ctx.stopped() {
+                    return;
+                }
+                array.swap(j - 1, j);
+                ctx.play(ctx.freq(array[j - 1] as f64, size as f64), 0.02, Wave::Sine);
+                ctx.visual(&array, &[j - 1, j]);
+                ctx.delay(ctx.adaptive_delay(45.0, size));
+                j -= 1;
+            }
+        }
+
         ctx.play_sorted(&array);
         if !loop_ || ctx.stopped() {
             return;
