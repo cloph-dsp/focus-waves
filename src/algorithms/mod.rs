@@ -1,4 +1,4 @@
-#![allow(non_snake_case)]
+﻿#![allow(non_snake_case)]
 
 use crate::engine::SortCtx;
 mod bubble;
@@ -69,38 +69,8 @@ mod samplesort;
 #[path = "recursive-bubble.rs"] mod recursive_bubble;
 #[path = "iterative-merge.rs"] mod iterative_merge;
 #[path = "bottom-up-heap.rs"] mod bottom_up_heap;
-#[path = "smooth-stooge.rs"] mod smooth_stooge;
 #[path = "binary-tree.rs"] mod binary_tree;
-#[path = "red-black-tree.rs"] mod red_black_tree;
-#[path = "aa-tree.rs"] mod aa_tree;
-#[path = "b-tree.rs"] mod b_tree;
-mod treap;
-#[path = "skip-list.rs"] mod skip_list;
 mod merge3;
-mod merge4;
-#[path = "polyphase-merge.rs"] mod polyphase_merge;
-#[path = "cascade-merge.rs"] mod cascade_merge;
-#[path = "tournament-heap.rs"] mod tournament_heap;
-#[path = "min-max-heap.rs"] mod min_max_heap;
-#[path = "binomial-heap.rs"] mod binomial_heap;
-#[path = "fibonacci-heap.rs"] mod fibonacci_heap;
-#[path = "pairing-heap.rs"] mod pairing_heap;
-#[path = "leftist-heap.rs"] mod leftist_heap;
-#[path = "skew-heap.rs"] mod skew_heap;
-#[path = "median-of3-quick.rs"] mod median_of3_quick;
-#[path = "random-pivot-quick.rs"] mod random_pivot_quick;
-#[path = "yaroslavskiy-quick.rs"] mod yaroslavskiy_quick;
-#[path = "hoare-partition.rs"] mod hoare_partition;
-#[path = "lomuto-partition.rs"] mod lomuto_partition;
-#[path = "natural-merge.rs"] mod natural_merge;
-#[path = "insertion-binary.rs"] mod insertion_binary;
-#[path = "shell-ciura.rs"] mod shell_ciura;
-#[path = "shell-knuth.rs"] mod shell_knuth;
-#[path = "shell-tokuda.rs"] mod shell_tokuda;
-#[path = "odd-even-merge.rs"] mod odd_even_merge;
-mod pairwise;
-#[path = "merge-exchange.rs"] mod merge_exchange;
-mod batch;
 pub fn run(id: &str, ctx: &mut SortCtx, size: usize, loop_: bool) -> bool {
     match id {
         "bubble" => bubble::generateBubbleSort(ctx, size, loop_),
@@ -171,38 +141,8 @@ pub fn run(id: &str, ctx: &mut SortCtx, size: usize, loop_: bool) -> bool {
         "recursive-bubble" => recursive_bubble::generateRecursiveBubbleSort(ctx, size, loop_),
         "iterative-merge" => iterative_merge::generateIterativeMergeSort(ctx, size, loop_),
         "bottom-up-heap" => bottom_up_heap::generateBottomUpHeapSort(ctx, size, loop_),
-        "smooth-stooge" => smooth_stooge::generateSmoothStoogeSort(ctx, size, loop_),
         "binary-tree" => binary_tree::generateBinaryTreeSort(ctx, size, loop_),
-        "red-black" => red_black_tree::generateRedBlackTreeSort(ctx, size, loop_),
-        "aa-tree" => aa_tree::generateAATreeSort(ctx, size, loop_),
-        "b-tree" => b_tree::generateBTreeSort(ctx, size, loop_),
-        "treap" => treap::generateTreapSort(ctx, size, loop_),
-        "skip-list" => skip_list::generateSkipListSort(ctx, size, loop_),
         "merge3" => merge3::generateMerge3Sort(ctx, size, loop_),
-        "merge4" => merge4::generateMerge4Sort(ctx, size, loop_),
-        "polyphase" => polyphase_merge::generatePolyphaseMergeSort(ctx, size, loop_),
-        "cascade" => cascade_merge::generateCascadeMergeSort(ctx, size, loop_),
-        "tournament-heap" => tournament_heap::generateTournamentHeapSort(ctx, size, loop_),
-        "min-max-heap" => min_max_heap::generateMinMaxHeapSort(ctx, size, loop_),
-        "binomial-heap" => binomial_heap::generateBinomialHeapSort(ctx, size, loop_),
-        "fibonacci-heap" => fibonacci_heap::generateFibonacciHeapSort(ctx, size, loop_),
-        "pairing-heap" => pairing_heap::generatePairingHeapSort(ctx, size, loop_),
-        "leftist-heap" => leftist_heap::generateLeftistHeapSort(ctx, size, loop_),
-        "skew-heap" => skew_heap::generateSkewHeapSort(ctx, size, loop_),
-        "median-of-3" => median_of3_quick::generateMedianOf3QuickSort(ctx, size, loop_),
-        "random-pivot" => random_pivot_quick::generateRandomPivotQuickSort(ctx, size, loop_),
-        "yaroslavskiy" => yaroslavskiy_quick::generateYaroslavskiyQuickSort(ctx, size, loop_),
-        "hoare-partition" => hoare_partition::generateHoarePartitionSort(ctx, size, loop_),
-        "lomuto-partition" => lomuto_partition::generateLomutoPartitionSort(ctx, size, loop_),
-        "natural-merge" => natural_merge::generateNaturalMergeSort(ctx, size, loop_),
-        "insertion-binary" => insertion_binary::generateInsertionBinarySort(ctx, size, loop_),
-        "shell-ciura" => shell_ciura::generateShellCiuraSort(ctx, size, loop_),
-        "shell-knuth" => shell_knuth::generateShellKnuthSort(ctx, size, loop_),
-        "shell-tokuda" => shell_tokuda::generateShellTokudaSort(ctx, size, loop_),
-        "odd-even-merge" => odd_even_merge::generateOddEvenMergeSort(ctx, size, loop_),
-        "pairwise" => pairwise::generatePairwiseSort(ctx, size, loop_),
-        "merge-exchange" => merge_exchange::generateMergeExchangeSort(ctx, size, loop_),
-        "batch-sort" => batch::generateBatchSort(ctx, size, loop_),
         _ => return false,
     }
     true

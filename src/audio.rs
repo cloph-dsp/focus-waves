@@ -59,5 +59,7 @@ impl Audio {
             .amplify(gain)
             .delay(Duration::from_secs_f32(offset.max(0.0)));
         self.player.append(source);
+        // `Player::clear()` pauses the player; appending alone never resumes it.
+        self.player.play();
     }
 }
